@@ -1,3 +1,11 @@
+/***************************************************************************
+ * Description: PluginProcessor
+ * version: 0.1.0
+ * Author: Panda-Young
+ * Date: 2024-07-06 15:29:30
+ * Copyright (c) 2024 by Panda-Young, All Rights Reserved.
+ **************************************************************************/
+
 /*
   ==============================================================================
 
@@ -8,6 +16,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "JucePluginDefines.h"
 
 //==============================================================================
 DemoAudioProcessor::DemoAudioProcessor()
@@ -22,10 +31,14 @@ DemoAudioProcessor::DemoAudioProcessor()
                        )
 #endif
 {
+    juce::File::SpecialLocationType LogDir = juce::File::SpecialLocationType::tempDirectory;
+    juce::File logFile = juce::File::getSpecialLocation(LogDir).getChildFile("Demo_VST_Plugin.log");
+    logger = std::make_unique<juce::FileLogger>(logFile, "");
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
 {
+    logger = nullptr;
 }
 
 //==============================================================================
@@ -95,6 +108,7 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    logger->logMessage("samplesPerBlock: " + juce::String(samplesPerBlock));
 }
 
 void DemoAudioProcessor::releaseResources()

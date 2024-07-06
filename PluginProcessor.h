@@ -1,3 +1,11 @@
+/***************************************************************************
+ * Description: Header of PluginProcessor
+ * version: 0.1.0
+ * Author: Panda-Young
+ * Date: 2024-07-06 15:29:30
+ * Copyright (c) 2024 by Panda-Young, All Rights Reserved.
+ **************************************************************************/
+
 /*
   ==============================================================================
 
@@ -52,6 +60,7 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    std::unique_ptr<juce::FileLogger> logger;
 
 private:
     //==============================================================================
