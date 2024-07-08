@@ -62,6 +62,13 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
     std::unique_ptr<juce::FileLogger> logger;
 
+    float *InputBuffer;
+    float *OutputBuffer;
+    float *TempBuffer_1[2];
+    float *TempBuffer_2[2];
+
+    int ProcessCount = 0;
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoAudioProcessor)

@@ -16,7 +16,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "JucePluginDefines.h"
+#include <JucePluginDefines.h>
 
 //==============================================================================
 DemoAudioProcessor::DemoAudioProcessor()
@@ -109,12 +109,51 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     logger->logMessage("samplesPerBlock: " + juce::String(samplesPerBlock));
+    InputBuffer = (float *)calloc(samplesPerBlock * 4, sizeof(float));
+    if (InputBuffer == nullptr) {
+        logger->logMessage("InputBuffer calloc failed");
+    }
+    OutputBuffer = (float *)calloc(samplesPerBlock * 4, sizeof(float));
+    if (OutputBuffer == nullptr) {
+        logger->logMessage("OutputBuffer calloc failed");
+    }
+    for (int i = 0; i < 2; i++) {
+        TempBuffer_1[i] = (float *)calloc(samplesPerBlock, sizeof(float));
+        if (TempBuffer_1[i] == nullptr) {
+            logger->logMessage("TempBuffer_1[" + juce::String(i) + "] calloc failed");
+        }
+        TempBuffer_2[i] = (float *)calloc(samplesPerBlock, sizeof(float));
+        if (TempBuffer_2[i] == nullptr) {
+            logger->logMessage("TempBuffer_2[" + juce::String(i) + "] calloc failed");
+        }
+    }
+    ProcessCount = 0;
+    logger->logMessage("prepareToPlay done!");
 }
 
 void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    if (InputBuffer != nullptr) {
+        free(InputBuffer);
+        InputBuffer = nullptr;
+    }
+    if (OutputBuffer != nullptr) {
+        free(OutputBuffer);
+        OutputBuffer = nullptr;
+    }
+    for (int i = 0; i < 2; i++) {
+        if (TempBuffer_1[i] != nullptr) {
+            free(TempBuffer_1[i]);
+            TempBuffer_1[i] = nullptr;
+        }
+        if (TempBuffer_2[i] != nullptr) {
+            free(TempBuffer_2[i]);
+            TempBuffer_2[i] = nullptr;
+        }
+    }
+    logger->logMessage("releaseResources done!");
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -148,6 +187,10 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+    auto numSamples = buffer.getNumSamples();
+    if (ProcessCount == 0) {
+        logger->logMessage("numSamples: " + juce::String(numSamples));
+    }
 
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
@@ -164,12 +207,42 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
+    for (int channel = 0; channel < 2; ++channel) {
+        for (int i = 0; i < numSamples; i++) {
+            InputBuffer[channel * 2 * numSamples + i + (ProcessCount % 2) * numSamples] = buffer.getSample(channel, i);
+        }
     }
+
+    if (ProcessCount % 2 == 0) {
+        for (int channel = 0; channel < 2; ++channel) {
+            for (int i = 0; i < numSamples; i++) {
+                buffer.setSample(channel, i, TempBuffer_2[channel][i]);
+            }
+        }
+        ProcessCount++;
+        return;
+    }
+
+    memcpy(OutputBuffer, InputBuffer, numSamples * 4 * sizeof(float));
+    _sleep(30);
+
+    for (int channel = 0; channel < 2; ++channel) {
+        // for (int i = 0; i < numSamples; i++) {
+        //     TempBuffer_2[channel][i] = OutputBuffer[channel * 2 * numSamples + i + numSamples];
+        //     TempBuffer_1[channel][i] = OutputBuffer[channel * 2 * numSamples + i];
+        // }
+        memcpy(TempBuffer_2[channel], OutputBuffer + channel * 2 * numSamples + numSamples, numSamples * sizeof(float));
+        memcpy(TempBuffer_1[channel], OutputBuffer + channel * 2 * numSamples, numSamples * sizeof(float));
+    }
+
+    if (ProcessCount % 2 != 0) {
+        for (int channel = 0; channel < 2; ++channel) {
+            for (int i = 0; i < numSamples; i++) {
+                buffer.setSample(channel, i, TempBuffer_1[channel][i]);
+            }
+        }
+    }
+    ProcessCount++;
 }
 
 //==============================================================================
