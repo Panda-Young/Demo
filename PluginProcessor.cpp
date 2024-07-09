@@ -17,6 +17,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
+#include <windows.h>
+
+#define MIN(a, b) (a) < (b) ? (a) : (b)
 
 //==============================================================================
 DemoAudioProcessor::DemoAudioProcessor()
@@ -31,9 +34,9 @@ DemoAudioProcessor::DemoAudioProcessor()
                        )
 #endif
 {
-    juce::File::SpecialLocationType LogDir = juce::File::SpecialLocationType::tempDirectory;
-    juce::File logFile = juce::File::getSpecialLocation(LogDir).getChildFile("Demo_VST_Plugin.log");
-    logger = std::make_unique<juce::FileLogger>(logFile, "");
+    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+    juce::File logFile = tempDir.getChildFile("Demo_Audition_VST_Plugin.log");
+    logger = std::make_unique<juce::FileLogger>(logFile, "Demo version: 1.1.0");
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
@@ -108,33 +111,43 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    logger->logMessage("samplesPerBlock: " + juce::String(samplesPerBlock));
-    InputBuffer = (float *)calloc(samplesPerBlock * 4, sizeof(float));
-    if (InputBuffer == nullptr) {
-        logger->logMessage("InputBuffer calloc failed");
-    }
-    OutputBuffer = (float *)calloc(samplesPerBlock * 4, sizeof(float));
-    if (OutputBuffer == nullptr) {
-        logger->logMessage("OutputBuffer calloc failed");
-    }
+    logger->logMessage("prepareToPlay: sampleRate=" + juce::String(sampleRate) + ", samplesPerBlock=" + juce::String(samplesPerBlock));
+
     for (int i = 0; i < 2; i++) {
-        TempBuffer_1[i] = (float *)calloc(samplesPerBlock, sizeof(float));
-        if (TempBuffer_1[i] == nullptr) {
-            logger->logMessage("TempBuffer_1[" + juce::String(i) + "] calloc failed");
+        write_buf[i] = (float *)calloc(block_size, sizeof(float));
+        if (write_buf[i] == nullptr) {
+            logger->logMessage("Failed to allocate write_buf[" + juce::String(i) + "]");
         }
-        TempBuffer_2[i] = (float *)calloc(samplesPerBlock, sizeof(float));
-        if (TempBuffer_2[i] == nullptr) {
-            logger->logMessage("TempBuffer_2[" + juce::String(i) + "] calloc failed");
+        read_buf[i] = (float *)calloc(block_size, sizeof(float));
+        if (read_buf[i] == nullptr) {
+            logger->logMessage("Failed to allocate read_buf[" + juce::String(i) + "]");
         }
     }
-    ProcessCount = 0;
-    logger->logMessage("prepareToPlay done!");
+    InputBuffer = (float *)calloc(block_size * 2, sizeof(float));
+    if (InputBuffer == nullptr) {
+        logger->logMessage("Failed to allocate InputBuffer");
+    }
+    OutputBuffer = (float *)calloc(block_size * 2, sizeof(float));
+    if (OutputBuffer == nullptr) {
+        logger->logMessage("Failed to allocate OutputBuffer");
+    }
 }
 
 void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    logger->logMessage("releaseResources");
+    for (int i = 0; i < 2; i++) {
+        if (write_buf[i] != nullptr) {
+            free(write_buf[i]);
+            write_buf[i] = nullptr;
+        }
+        if (read_buf[i] != nullptr) {
+            free(read_buf[i]);
+            read_buf[i] = nullptr;
+        }
+    }
     if (InputBuffer != nullptr) {
         free(InputBuffer);
         InputBuffer = nullptr;
@@ -143,17 +156,6 @@ void DemoAudioProcessor::releaseResources()
         free(OutputBuffer);
         OutputBuffer = nullptr;
     }
-    for (int i = 0; i < 2; i++) {
-        if (TempBuffer_1[i] != nullptr) {
-            free(TempBuffer_1[i]);
-            TempBuffer_1[i] = nullptr;
-        }
-        if (TempBuffer_2[i] != nullptr) {
-            free(TempBuffer_2[i]);
-            TempBuffer_2[i] = nullptr;
-        }
-    }
-    logger->logMessage("releaseResources done!");
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -184,65 +186,72 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 
 void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    clock_t start = clock();
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
-    auto numSamples = buffer.getNumSamples();
-    if (ProcessCount == 0) {
-        logger->logMessage("numSamples: " + juce::String(numSamples));
+    int numSamples = buffer.getNumSamples();
+    if (ProcessCounter++ == 0) {
+        logger->logMessage("processBlock: numSamples=" + juce::String(numSamples));
     }
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    int buffer_index = 0;
+    float *p_write[2] = {0};
+    float *p_read[2] = {0};
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < 2; ++channel) {
-        for (int i = 0; i < numSamples; i++) {
-            InputBuffer[channel * 2 * numSamples + i + (ProcessCount % 2) * numSamples] = buffer.getSample(channel, i);
+    while (buffer_index != numSamples) {
+        for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+            p_write[channel] = write_buf[channel];
+            p_read[channel] = read_buf[channel];
         }
-    }
-
-    if (ProcessCount % 2 == 0) {
-        for (int channel = 0; channel < 2; ++channel) {
-            for (int i = 0; i < numSamples; i++) {
-                buffer.setSample(channel, i, TempBuffer_2[channel][i]);
+        int n_samples_to_write = 0;
+        n_samples_to_write = MIN(numSamples - buffer_index, block_size - write_index);
+        n_samples_to_write = MIN(n_samples_to_write, block_size - read_index);
+        for (int i = 0; i < n_samples_to_write; i++) {
+            for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+                write_buf[channel][write_index + i] = buffer.getSample(channel, buffer_index + i);
             }
         }
-        ProcessCount++;
-        return;
-    }
-
-    memcpy(OutputBuffer, InputBuffer, numSamples * 4 * sizeof(float));
-    _sleep(30);
-
-    for (int channel = 0; channel < 2; ++channel) {
-        // for (int i = 0; i < numSamples; i++) {
-        //     TempBuffer_2[channel][i] = OutputBuffer[channel * 2 * numSamples + i + numSamples];
-        //     TempBuffer_1[channel][i] = OutputBuffer[channel * 2 * numSamples + i];
-        // }
-        memcpy(TempBuffer_2[channel], OutputBuffer + channel * 2 * numSamples + numSamples, numSamples * sizeof(float));
-        memcpy(TempBuffer_1[channel], OutputBuffer + channel * 2 * numSamples, numSamples * sizeof(float));
-    }
-
-    if (ProcessCount % 2 != 0) {
-        for (int channel = 0; channel < 2; ++channel) {
-            for (int i = 0; i < numSamples; i++) {
-                buffer.setSample(channel, i, TempBuffer_1[channel][i]);
+        write_index += n_samples_to_write;
+        if (write_index == block_size) {
+            for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+                memcpy(InputBuffer + (channel * block_size), write_buf[channel], block_size * sizeof(float));
+                memset(write_buf[channel], 0, block_size * sizeof(float));
             }
         }
+        if (write_index == block_size) {
+            if (isFirstAlgoFrame++ == 0) {
+                _sleep(600);
+            } else {
+                _sleep(32);
+            }
+            for (int j = 0; j < block_size * 2; j++) {
+                OutputBuffer[j] = InputBuffer[j] / 2.0f;
+            }
+            for (int i = 0; i < 2; i++) {
+                memcpy(write_buf[i], OutputBuffer + (i * block_size), block_size * sizeof(float));
+            }
+        }
+        for (int i = 0; i < n_samples_to_write; i++) {
+            for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+                buffer.setSample(channel, buffer_index + i, read_buf[channel][read_index + i]);
+            }
+        }
+        buffer_index += n_samples_to_write;
+        if (write_index == block_size) {
+            for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+                write_buf[channel] = p_read[channel];
+                read_buf[channel] = p_write[channel];
+            }
+            write_index = 0;
+        }
+        read_index += n_samples_to_write;
+        if (read_index == block_size) {
+            read_index = 0;
+        }
     }
-    ProcessCount++;
+    clock_t stop = clock();
+    logger->logMessage("ProcessCounter = " + juce::String(ProcessCounter) + ", elapsed time: " + juce::String((double)(stop - start)) + " ms");
 }
 
 //==============================================================================

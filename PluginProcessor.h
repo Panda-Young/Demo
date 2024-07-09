@@ -62,12 +62,16 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
     std::unique_ptr<juce::FileLogger> logger;
 
-    float *InputBuffer;
-    float *OutputBuffer;
-    float *TempBuffer_1[2];
-    float *TempBuffer_2[2];
+    float *write_buf[2] = {0};
+    float *read_buf[2] = {0};
+    int write_index = 0;
+    int read_index = 0;
+    float *InputBuffer = nullptr;
+    float *OutputBuffer = nullptr;
 
-    int ProcessCount = 0;
+    const int block_size = 2048;
+    uint32_t isFirstAlgoFrame = 0;
+    uint32_t ProcessCounter = 0;
 
 private:
     //==============================================================================
