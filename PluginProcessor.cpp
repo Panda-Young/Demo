@@ -19,7 +19,7 @@
 #include <JucePluginDefines.h>
 #include <windows.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo Version 1.1.0"
+#define VST_PLUGIN_VERSION_STRING "Demo Version 1.1.9"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 //==============================================================================
@@ -57,6 +57,25 @@ DemoAudioProcessor::DemoAudioProcessor()
     if (OutputBuffer == nullptr) {
         logger->logMessage("Failed to allocate OutputBuffer");
     }
+
+    char version[32] = {0};
+    if (get_algo_version(version) != 0) {
+        logger->logMessage("Failed to get_algo_version");
+    } else {
+        logger->logMessage("get_algo_version: " + juce::String(version));
+    }
+
+    algo_handle = algo_init();
+    if (algo_handle == nullptr) {
+        logger->logMessage("Failed to algo_init");
+        return;
+    }
+
+    float threshold = 1.0f;
+    if (algo_set_param(algo_handle, ALGO_PARAM2, &threshold, sizeof(float)) != 0) {
+        logger->logMessage("Failed to algo_set_param SET_PARAM2");
+    }
+    logger->logMessage("algo_set_param SET_PARAM2: " + juce::String(threshold));
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
@@ -79,6 +98,11 @@ DemoAudioProcessor::~DemoAudioProcessor()
         free(OutputBuffer);
         OutputBuffer = nullptr;
     }
+    if (algo_handle != nullptr) {
+        algo_deinit(algo_handle);
+        algo_handle = nullptr;
+    }
+
     logger = nullptr;
 }
 
@@ -226,8 +250,8 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             } else {
                 _sleep(32);
             }
-            for (int j = 0; j < block_size * 2; j++) {
-                OutputBuffer[j] = InputBuffer[j] / 2.0f;
+            if (algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2) != 0) {
+                logger->logMessage("Failed to algo_process ProcessCounter=" + juce::String(ProcessCounter));
             }
             for (int i = 0; i < 2; i++) {
                 memcpy(write_buf[i], OutputBuffer + (i * block_size), block_size * sizeof(float));

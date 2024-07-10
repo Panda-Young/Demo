@@ -18,6 +18,12 @@
 
 #include <JuceHeader.h>
 
+#ifdef __cplusplus
+extern "C" {
+#include "algo_example.h"
+}
+#endif
+
 //==============================================================================
 /**
 */
@@ -72,6 +78,8 @@ public:
     const int block_size = 2048;
     uint32_t isFirstAlgoFrame = 0;
     uint32_t ProcessCounter = 0;
+
+    void *algo_handle = nullptr;
 
 private:
     //==============================================================================
