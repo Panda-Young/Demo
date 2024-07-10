@@ -81,6 +81,9 @@ public:
 
     void *algo_handle = nullptr;
 
+    bool bypassEnable = false;
+    float gain = 0.0f;
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoAudioProcessor)

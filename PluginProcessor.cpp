@@ -19,7 +19,7 @@
 #include <JucePluginDefines.h>
 #include <windows.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo Version 1.1.9"
+#define VST_PLUGIN_VERSION_STRING "Demo Version 1.2.0"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 //==============================================================================
@@ -59,8 +59,10 @@ DemoAudioProcessor::DemoAudioProcessor()
     }
 
     char version[32] = {0};
-    if (get_algo_version(version) != 0) {
-        logger->logMessage("Failed to get_algo_version");
+    int ret = 0;
+    ret = get_algo_version(version);
+    if (ret != 0) {
+        logger->logMessage("Failed to get_algo_version. ret = " + juce::String(ret));
     } else {
         logger->logMessage("get_algo_version: " + juce::String(version));
     }
@@ -70,12 +72,6 @@ DemoAudioProcessor::DemoAudioProcessor()
         logger->logMessage("Failed to algo_init");
         return;
     }
-
-    float threshold = 1.0f;
-    if (algo_set_param(algo_handle, ALGO_PARAM2, &threshold, sizeof(float)) != 0) {
-        logger->logMessage("Failed to algo_set_param SET_PARAM2");
-    }
-    logger->logMessage("algo_set_param SET_PARAM2: " + juce::String(threshold));
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
@@ -211,6 +207,10 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 
 void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    if (bypassEnable) {
+        return;
+    }
+
     clock_t start = clock();
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
@@ -250,8 +250,9 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             } else {
                 _sleep(32);
             }
-            if (algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2) != 0) {
-                logger->logMessage("Failed to algo_process ProcessCounter=" + juce::String(ProcessCounter));
+            int ret = algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2);
+            if (ret != 0) {
+                logger->logMessage("Failed to algo_process. ret = " + juce::String(ret));
             }
             for (int i = 0; i < 2; i++) {
                 memcpy(write_buf[i], OutputBuffer + (i * block_size), block_size * sizeof(float));
@@ -296,12 +297,38 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
+    juce::ValueTree tree("DemoAudioProcessor");
+    tree.setProperty("bypassEnable", bypassEnable, nullptr);
+    tree.setProperty("gain", gain, nullptr);
+    std::unique_ptr<juce::XmlElement> xml(tree.createXml());
+    copyXmlToBinary(*xml, destData);
+    logger->logMessage("store parameters to memory block:");
+    logger->logMessage("    bypassEnable: " + juce::String(bypassEnable ? "true" : "false"));
+    logger->logMessage("    gain: " + juce::String(gain));
 }
 
 void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+    if (xmlState != nullptr)
+    {
+        if (xmlState->hasTagName ("DemoAudioProcessor"))
+        {
+            juce::ValueTree tree = juce::ValueTree::fromXml (*xmlState);
+            bypassEnable = tree.getProperty("bypassEnable", bypassEnable);
+            gain = tree.getProperty("gain", gain);
+            int ret = algo_set_param(algo_handle, ALGO_PARAM1, &bypassEnable, sizeof(bool));
+            if (ret != 0) {
+                logger->logMessage("Failed to algo_set_param. ret = " + juce::String(ret));
+            }
+            logger->logMessage("restore parameters from memory block:");
+            logger->logMessage("    bypassEnable: " + juce::String(bypassEnable ? "true" : "false"));
+            logger->logMessage("    gain: " + juce::String(gain));
+        }
+    }
 }
 
 //==============================================================================

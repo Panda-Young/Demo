@@ -22,10 +22,10 @@ int get_algo_version(char *version)
 {
     if (version == NULL) {
         // LOGE("version is NULL");
-        return -1;
+        return E_VERSION_BUFFER_NULL;
     }
     strcpy(version, VERSION);
-    return 0;
+    return E_OK;
 }
 
 void *algo_init()
@@ -60,11 +60,11 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
 {
     if (algo_handle == NULL) {
         // LOGE("algo_handle is NULL");
-        return -1;
+        return E_ALGO_HANDLE_NULL;
     }
     if (param == NULL) {
         // LOGE("param is NULL");
-        return -1;
+        return E_PARAM_BUFFER_NULL;
     }
 
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
@@ -72,7 +72,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM1: {
         if (param_size != sizeof(char)) {
             // LOGE("param_size is not correct");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         algo_handle_ptr->param1 = *(char *)param;
         // LOGI("set param1: %c", algo_handle_ptr->param1);
@@ -81,7 +81,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM2: {
         if (param_size != sizeof(float)) {
             // LOGE("param_size is not correct");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         algo_handle_ptr->param2 = *(float *)param;
         // LOGI("set param2: %d", algo_handle_ptr->param2);
@@ -90,7 +90,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM3: {
         if (param_size > MAX_BUF_SIZE) {
             // LOGE("param_size is too large");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         memset(algo_handle_ptr->param3, 0, MAX_BUF_SIZE);
         memcpy(algo_handle_ptr->param3, param, param_size);
@@ -100,32 +100,32 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM4: {
         if (param_size > MAX_BUF_SIZE) {
             // LOGE("param_size is too large");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         algo_handle_ptr->param4 = (float *)malloc(param_size);
         if (algo_handle_ptr->param4 == NULL) {
             // LOGE("allocate for param4 failed");
-            return -1;
+            return E_ALLOCATE_FAILED;
         }
         memcpy(algo_handle_ptr->param4, param, param_size);
         break;
     }
     default:
         // LOGE("cmd is invalid");
-        return -1;
+        return E_PARAM_OUT_OF_RANGE;
     }
-    return 0;
+    return E_OK;
 }
 
 int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_size)
 {
     if (algo_handle == NULL) {
         // LOGE("algo_handle is NULL");
-        return -1;
+        return E_ALGO_HANDLE_NULL;
     }
     if (param == NULL) {
         // LOGE("param is NULL");
-        return -1;
+        return E_PARAM_BUFFER_NULL;
     }
 
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
@@ -133,7 +133,7 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM1: {
         if (param_size != sizeof(char)) {
             // LOGE("param_size is not correct");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         *(char *)param = algo_handle_ptr->param1;
         // LOGI("get param1: %c", algo_handle_ptr->param1);
@@ -142,7 +142,7 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM2: {
         if (param_size != sizeof(float)) {
             // LOGE("param_size is not correct");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         *(float *)param = algo_handle_ptr->param2;
         // LOGI("get param2: %d", algo_handle_ptr->param2);
@@ -151,7 +151,7 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM3: {
         if (param_size > MAX_BUF_SIZE) {
             // LOGE("param_size is too large");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         memcpy(param, algo_handle_ptr->param3, param_size);
         // LOGI("get param3: %s", algo_handle_ptr->param3);
@@ -160,35 +160,35 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM4: {
         if (param_size > MAX_BUF_SIZE) {
             // LOGE("param_size is too large");
-            return -1;
+            return E_PARAM_SIZE_INVALID;
         }
         memcpy(param, algo_handle_ptr->param4, param_size);
         break;
     }
     default:
         // LOGE("cmd is invalid");
-        return -1;
+        return E_PARAM_OUT_OF_RANGE;
     }
-    return 0;
+    return E_OK;
 }
 
 int algo_process(void *algo_handle, float *input, float *output, int block_size)
 {
     if (algo_handle == NULL) {
         // $1
-        return -1;
+        return E_ALGO_HANDLE_NULL;
     }
     if (input == NULL) {
         // LOGE("input is NULL");
-        return -1;
+        return E_PARAM_BUFFER_NULL;
     }
     if (output == NULL) {
         // LOGE("output is NULL");
-        return -1;
+        return E_PARAM_BUFFER_NULL;
     }
     if (block_size <= 0) {
         // LOGE("block_size is not correct");
-        return -1;
+        return E_PARAM_SIZE_INVALID;
     }
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
  
@@ -203,5 +203,5 @@ int algo_process(void *algo_handle, float *input, float *output, int block_size)
         }
     }
 
-    return 0;
+    return E_OK;
 }

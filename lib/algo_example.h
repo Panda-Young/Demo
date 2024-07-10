@@ -15,6 +15,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define E_OK                   0
+#define E_VERSION_BUFFER_NULL -1
+#define E_ALGO_HANDLE_NULL    -2
+#define E_PARAM_BUFFER_NULL   -3
+#define E_PARAM_SIZE_INVALID  -4
+#define E_ALLOCATE_FAILED     -5
+#define E_PARAM_OUT_OF_RANGE  -6
+
 typedef enum algo_param {
     ALGO_PARAM_START = 0,
     ALGO_PARAM1,
