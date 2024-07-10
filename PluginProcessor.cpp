@@ -19,6 +19,7 @@
 #include <JucePluginDefines.h>
 #include <windows.h>
 
+#define VST_PLUGIN_VERSION_STRING "Demo Version 1.1.0"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 //==============================================================================
@@ -36,11 +37,48 @@ DemoAudioProcessor::DemoAudioProcessor()
 {
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
     juce::File logFile = tempDir.getChildFile("Demo_Audition_VST_Plugin.log");
-    logger = std::make_unique<juce::FileLogger>(logFile, "Demo version: 1.1.0");
+    logger = std::make_unique<juce::FileLogger>(logFile, VST_PLUGIN_VERSION_STRING);
+
+    for (int i = 0; i < 2; i++) {
+        write_buf[i] = (float *)calloc(block_size, sizeof(float));
+        if (write_buf[i] == nullptr) {
+            logger->logMessage("Failed to allocate write_buf[" + juce::String(i) + "]");
+        }
+        read_buf[i] = (float *)calloc(block_size, sizeof(float));
+        if (read_buf[i] == nullptr) {
+            logger->logMessage("Failed to allocate read_buf[" + juce::String(i) + "]");
+        }
+    }
+    InputBuffer = (float *)calloc(block_size * 2, sizeof(float));
+    if (InputBuffer == nullptr) {
+        logger->logMessage("Failed to allocate InputBuffer");
+    }
+    OutputBuffer = (float *)calloc(block_size * 2, sizeof(float));
+    if (OutputBuffer == nullptr) {
+        logger->logMessage("Failed to allocate OutputBuffer");
+    }
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
 {
+    for (int i = 0; i < 2; i++) {
+        if (write_buf[i] != nullptr) {
+            free(write_buf[i]);
+            write_buf[i] = nullptr;
+        }
+        if (read_buf[i] != nullptr) {
+            free(read_buf[i]);
+            read_buf[i] = nullptr;
+        }
+    }
+    if (InputBuffer != nullptr) {
+        free(InputBuffer);
+        InputBuffer = nullptr;
+    }
+    if (OutputBuffer != nullptr) {
+        free(OutputBuffer);
+        OutputBuffer = nullptr;
+    }
     logger = nullptr;
 }
 
@@ -112,25 +150,6 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     logger->logMessage("prepareToPlay: sampleRate=" + juce::String(sampleRate) + ", samplesPerBlock=" + juce::String(samplesPerBlock));
-
-    for (int i = 0; i < 2; i++) {
-        write_buf[i] = (float *)calloc(block_size, sizeof(float));
-        if (write_buf[i] == nullptr) {
-            logger->logMessage("Failed to allocate write_buf[" + juce::String(i) + "]");
-        }
-        read_buf[i] = (float *)calloc(block_size, sizeof(float));
-        if (read_buf[i] == nullptr) {
-            logger->logMessage("Failed to allocate read_buf[" + juce::String(i) + "]");
-        }
-    }
-    InputBuffer = (float *)calloc(block_size * 2, sizeof(float));
-    if (InputBuffer == nullptr) {
-        logger->logMessage("Failed to allocate InputBuffer");
-    }
-    OutputBuffer = (float *)calloc(block_size * 2, sizeof(float));
-    if (OutputBuffer == nullptr) {
-        logger->logMessage("Failed to allocate OutputBuffer");
-    }
 }
 
 void DemoAudioProcessor::releaseResources()
@@ -138,24 +157,6 @@ void DemoAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     logger->logMessage("releaseResources");
-    for (int i = 0; i < 2; i++) {
-        if (write_buf[i] != nullptr) {
-            free(write_buf[i]);
-            write_buf[i] = nullptr;
-        }
-        if (read_buf[i] != nullptr) {
-            free(read_buf[i]);
-            read_buf[i] = nullptr;
-        }
-    }
-    if (InputBuffer != nullptr) {
-        free(InputBuffer);
-        InputBuffer = nullptr;
-    }
-    if (OutputBuffer != nullptr) {
-        free(OutputBuffer);
-        OutputBuffer = nullptr;
-    }
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
