@@ -99,20 +99,24 @@ DemoAudioProcessor::~DemoAudioProcessor()
         algo_handle = nullptr;
     }
 
+    logger->logMessage("AudioProcessor destroyed");
     logger = nullptr;
 }
 
 //==============================================================================
 const juce::String DemoAudioProcessor::getName() const
 {
+    logger->logMessage("getName: " + juce::String(JucePlugin_Name));
     return JucePlugin_Name;
 }
 
 bool DemoAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
+    // logger->logMessage("acceptsMidi: true");
     return true;
    #else
+    // logger->logMessage("acceptsMidi: false");
     return false;
    #endif
 }
@@ -120,8 +124,10 @@ bool DemoAudioProcessor::acceptsMidi() const
 bool DemoAudioProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
+//    logger->logMessage("producesMidi: true");
     return true;
    #else
+    // logger->logMessage("producesMidi: false");
     return false;
    #endif
 }
@@ -129,39 +135,52 @@ bool DemoAudioProcessor::producesMidi() const
 bool DemoAudioProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
+    // logger->logMessage("isMidiEffect: true");
     return true;
    #else
+    // logger->logMessage("isMidiEffect: false");
     return false;
    #endif
 }
 
 double DemoAudioProcessor::getTailLengthSeconds() const
 {
-    return 0.0;
+    if (sampleRate == 0) {
+        logger->logMessage("getTailLengthSeconds: 0");
+        return 0;
+    }
+    double tailLength = static_cast<double>(block_size) / sampleRate;
+    logger->logMessage("getTailLengthSeconds: " + juce::String(tailLength));
+    return tailLength;
 }
 
 int DemoAudioProcessor::getNumPrograms()
 {
+    logger->logMessage("getNumPrograms: 1");
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
                 // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int DemoAudioProcessor::getCurrentProgram()
 {
+    logger->logMessage("getCurrentProgram: 0");
     return 0;
 }
 
 void DemoAudioProcessor::setCurrentProgram (int index)
 {
+    logger->logMessage("setCurrentProgram: index=" + juce::String(index));
 }
 
 const juce::String DemoAudioProcessor::getProgramName (int index)
 {
+    logger->logMessage("getProgramName: index=" + juce::String(index));
     return {};
 }
 
 void DemoAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
+    logger->logMessage("changeProgramName: index=" + juce::String(index) + ", newName=" + newName);
 }
 
 //==============================================================================
@@ -169,7 +188,9 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    logger->logMessage("prepareToPlay: sampleRate=" + juce::String(sampleRate) + ", samplesPerBlock=" + juce::String(samplesPerBlock));
+    this->sampleRate = sampleRate;
+    logger->logMessage("prepareToPlay: sampleRate=" + juce::String(sampleRate) +
+                       ", samplesPerBlock=" + juce::String(samplesPerBlock));
 }
 
 void DemoAudioProcessor::releaseResources()
@@ -200,6 +221,7 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
         return false;
    #endif
 
+    logger->logMessage("isBusesLayoutSupported: true");
     return true;
   #endif
 }
@@ -277,17 +299,20 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
     }
     clock_t stop = clock();
-    logger->logMessage("ProcessCounter = " + juce::String(ProcessCounter) + ", elapsed time: " + juce::String((double)(stop - start)) + " ms");
+    logger->logMessage("ProcessCounter = " + juce::String(ProcessCounter) +
+                       ", elapsed time: " + juce::String((double)(stop - start)) + " ms");
 }
 
 //==============================================================================
 bool DemoAudioProcessor::hasEditor() const
 {
+    logger->logMessage("hasEditor: true");
     return true; // (change this to false if you choose to not supply an editor)
 }
 
 juce::AudioProcessorEditor* DemoAudioProcessor::createEditor()
 {
+    logger->logMessage("createEditor");
     return new DemoAudioProcessorEditor (*this);
 }
 
@@ -300,8 +325,10 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     juce::ValueTree tree("DemoAudioProcessor");
     tree.setProperty("bypassEnable", bypassEnable, nullptr);
     tree.setProperty("gain", gain, nullptr);
-    std::unique_ptr<juce::XmlElement> xml(tree.createXml());
-    copyXmlToBinary(*xml, destData);
+    juce::MemoryOutputStream stream(destData, false);
+    tree.writeToStream(stream);
+    // if there are many parameters, you can use the following code to convert the ValueTree to XML format log
+    // logger->logMessage("store parameters to memory block:\n" + juce::String(tree.toXmlString()));
     logger->logMessage("store parameters to memory block:");
     logger->logMessage("    bypassEnable: " + juce::String(bypassEnable ? "true" : "false"));
     logger->logMessage("    gain: " + juce::String(gain));
@@ -311,22 +338,18 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
-    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
-
-    if (xmlState != nullptr)
-    {
-        if (xmlState->hasTagName ("DemoAudioProcessor"))
-        {
-            juce::ValueTree tree = juce::ValueTree::fromXml (*xmlState);
-            bypassEnable = tree.getProperty("bypassEnable", bypassEnable);
-            gain = tree.getProperty("gain", gain);
-            int ret = algo_set_param(algo_handle, ALGO_PARAM1, &bypassEnable, sizeof(bool));
-            if (ret != 0) {
-                logger->logMessage("Failed to algo_set_param. ret = " + juce::String(ret));
-            }
-            logger->logMessage("restore parameters from memory block:");
-            logger->logMessage("    bypassEnable: " + juce::String(bypassEnable ? "true" : "false"));
-            logger->logMessage("    gain: " + juce::String(gain));
+    juce::ValueTree tree = juce::ValueTree::readFromData(data, sizeInBytes);
+    if (tree.isValid()) {
+        bypassEnable = tree.getProperty("bypassEnable", bypassEnable);
+        gain = tree.getProperty("gain", gain);
+        // if there are many parameters, you can use the following code to convert the ValueTree to XML format log
+        // logger->logMessage("restore parameters from memory block:\n" + juce::String(tree.toXmlString()));
+        logger->logMessage("restore parameters from memory block:");
+        logger->logMessage("    bypassEnable: " + juce::String(bypassEnable ? "true" : "false"));
+        logger->logMessage("    gain: " + juce::String(gain));
+        int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
+        if (ret != 0) {
+            logger->logMessage("Failed to algo_set_param. ret = " + juce::String(ret));
         }
     }
 }

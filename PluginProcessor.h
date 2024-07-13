@@ -68,6 +68,18 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
     std::unique_ptr<juce::FileLogger> logger;
 
+    void *algo_handle = nullptr;
+    bool bypassEnable = false;
+    float gain = 0.0f;
+
+private:
+    //==============================================================================
+    double sampleRate = 0; // default sample rate
+
+    const int block_size = 2048;
+    uint32_t isFirstAlgoFrame = 0;
+    uint32_t ProcessCounter = 0;
+
     float *write_buf[2] = {0};
     float *read_buf[2] = {0};
     int write_index = 0;
@@ -75,16 +87,5 @@ public:
     float *InputBuffer = nullptr;
     float *OutputBuffer = nullptr;
 
-    const int block_size = 2048;
-    uint32_t isFirstAlgoFrame = 0;
-    uint32_t ProcessCounter = 0;
-
-    void *algo_handle = nullptr;
-
-    bool bypassEnable = false;
-    float gain = 0.0f;
-
-private:
-    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoAudioProcessor)
 };

@@ -57,6 +57,7 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
 
 DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
 {
+    audioProcessor.logger->logMessage("UI destroyed");
 }
 
 //==============================================================================
@@ -64,12 +65,14 @@ void DemoAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    // audioProcessor.logger->logMessage("UI painted");
 }
 
 void DemoAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
+    audioProcessor.logger->logMessage("UI resized");
 }
 
 void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
@@ -89,7 +92,7 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
         if (ret != E_OK) {
             audioProcessor.logger->logMessage("algo_set_param failed. ret = " + juce::String(ret));
         } else {
-            audioProcessor.logger->logMessage("Gain is set to " + juce::String(audioProcessor.gain));
+            audioProcessor.logger->logMessage("Gain has been set to " + juce::String(audioProcessor.gain));
         }
     }
 }
