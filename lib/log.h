@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LOG_FILE_PATH "C:\\Users\\young\\AppData\\Local\\Temp\\Demo_Audition_VST_Plugin.log"
+#define LOG_FILE_PATH "C:\\Users\\young\\AppData\\Local\\Temp\\Demo_VST_Plugin.log"
 
 #ifndef __FILENAME__
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)

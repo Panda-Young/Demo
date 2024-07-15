@@ -46,7 +46,7 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     GainSlider.setSliderStyle(juce::Slider::Rotary);
     GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
     GainSlider.setBounds(UI_WIDTH / 2 - SLIDER_WIDTH / 2, MARGIN + BUTTON_HEIGHT + MARGIN, SLIDER_WIDTH, SLIDER_HEIGHT);
-    GainSlider.setRange(-10.0, 10.0, 0.1);
+    GainSlider.setRange(-20.0, 20.0, 0.1);
     GainSlider.setValue(audioProcessor.gain);
     GainSlider.addListener(this);
     addAndMakeVisible(GainSlider);
@@ -92,7 +92,7 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
         if (ret != E_OK) {
             audioProcessor.logger->logMessage("algo_set_param failed. ret = " + juce::String(ret));
         } else {
-            audioProcessor.logger->logMessage("Gain has been set to " + juce::String(audioProcessor.gain));
+            audioProcessor.logger->logMessage("Gain has been set to " + juce::String(audioProcessor.gain) + " dB");
         }
     }
 }

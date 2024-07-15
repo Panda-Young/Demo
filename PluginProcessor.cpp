@@ -19,7 +19,7 @@
 #include <JucePluginDefines.h>
 #include <windows.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo Version 1.2.0"
+#define VST_PLUGIN_VERSION_STRING "Demo Version 1.2.2"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 //==============================================================================
@@ -36,7 +36,7 @@ DemoAudioProcessor::DemoAudioProcessor()
 #endif
 {
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-    juce::File logFile = tempDir.getChildFile("Demo_Audition_VST_Plugin.log");
+    juce::File logFile = tempDir.getChildFile("Demo_VST_Plugin.log");
     logger = std::make_unique<juce::FileLogger>(logFile, VST_PLUGIN_VERSION_STRING);
 
     for (int i = 0; i < 2; i++) {
@@ -268,9 +268,9 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
         if (write_index == block_size) {
             if (isFirstAlgoFrame++ == 0) {
-                _sleep(600);
-            } else {
-                _sleep(32);
+            //     _sleep(600);
+            // } else {
+            //     _sleep(32);
             }
             int ret = algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2);
             if (ret != 0) {

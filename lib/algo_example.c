@@ -8,8 +8,9 @@
 
 #include "algo_example.h"
 #include "log.h"
+#include "gain_control.h"
 
-#define VERSION "0.1.1"
+#define VERSION "0.1.2"
 #define MAX_BUF_SIZE 1024
 
 typedef struct algo_handle {
@@ -193,15 +194,22 @@ int algo_process(void *algo_handle, float *input, float *output, int block_size)
     }
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
 
+    if (algo_handle_ptr->param2 == 0.0f) {
+        memcpy(output, input, block_size * sizeof(float));
+        return E_OK;
+    }
+
     for (int i = 0; i < block_size; i++) {
-        float result = input[i] * algo_handle_ptr->param2;
-        if (result > 1.0f) {
-            output[i] = 1.0f;
-        } else if (result < -1.0f) {
-            output[i] = -1.0f;
-        } else {
-            output[i] = result;
-        }
+        float result = input[i] * dBChangeToFactor(algo_handle_ptr->param2);
+        output[i] = result;
+
+        // if (result > 1.0f) {
+        //     output[i] = 1.0f;
+        // } else if (result < -1.0f) {
+        //     output[i] = -1.0f;
+        // } else {
+        //     output[i] = result;
+        // }
     }
 
     return E_OK;
