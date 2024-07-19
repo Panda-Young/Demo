@@ -18,7 +18,7 @@
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.19"
+#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.24"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 extern juce::FileLogger *globalLogger;
@@ -358,13 +358,13 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         }
     }
 
-    if (auto *editor = dynamic_cast<DemoAudioProcessorEditor *>(getActiveEditor())) {
-        editor->updateParameterDisplays();
-    }
-
     std::ostringstream oss;
     oss << "restore parameters from memory block:\n    " << tree.toXmlString();
     LOG_MSG(LOG_INFO, oss.str());
+
+    if (auto *editor = dynamic_cast<DemoAudioProcessorEditor *>(getActiveEditor())) {
+        editor->updateParameterDisplays();
+    }
 }
 
 //==============================================================================
