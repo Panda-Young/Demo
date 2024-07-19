@@ -22,7 +22,7 @@ typedef enum {
     LOG_OFF = 0,
     LOG_ERROR,
     LOG_WARNING,
-    LOG_NORMAL,
+    LOG_INFO,
     LOG_DEBUG,
 } LOG_TYPE;
 
@@ -56,10 +56,10 @@ typedef enum {
 
 #define LOGI(fmt, ...)                                                                                                  \
     do {                                                                                                                \
-        if (log_level >= LOG_NORMAL) {                                                                                  \
+        if (log_level >= LOG_INFO) {                                                                                  \
             FILE *log_file = fopen(LOG_FILE_PATH, "a+");                                                                \
             if (log_file) {                                                                                             \
-                fprintf(log_file, "NORMAL  %s@%s(%d): " fmt "\n", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+                fprintf(log_file, "INFO  %s@%s(%d): " fmt "\n", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                 fflush(log_file);                                                                                       \
                 fclose(log_file);                                                                                       \
             }                                                                                                           \

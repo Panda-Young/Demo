@@ -96,3 +96,10 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
         }
     }
 }
+
+void DemoAudioProcessorEditor::updateParameterDisplays()
+{
+    GainSlider.setValue(audioProcessor.gain, juce::NotificationType::dontSendNotification);
+    BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? juce::Colours::lightgreen : juce::Colours::lightslategrey);
+    audioProcessor.logger->logMessage("Parameter displays updated from restored state");
+}

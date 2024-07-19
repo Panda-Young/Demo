@@ -34,6 +34,7 @@ public:
 
     void buttonClicked(juce::Button* button) override;
     void sliderValueChanged(juce::Slider* slider) override;
+    void updateParameterDisplays();
 
 private:
     // This reference is provided as a quick way for your editor to

@@ -19,7 +19,7 @@
 #include <JucePluginDefines.h>
 #include <windows.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo Version 1.2.2"
+#define VST_PLUGIN_VERSION_STRING "Demo Version 1.2.9"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 //==============================================================================
@@ -208,11 +208,7 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
     return true;
   #else
     // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
     // This checks if the input layout matches the output layout
@@ -221,7 +217,8 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
         return false;
    #endif
 
-    logger->logMessage("isBusesLayoutSupported: true");
+    logger->logMessage("isBusesLayoutSupported: Output: " + juce::String(layouts.getMainOutputChannelSet().size()) +
+                       " channels, Input: " + juce::String(layouts.getMainInputChannelSet().size()) + " channels");
     return true;
   #endif
 }
@@ -327,11 +324,7 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     tree.setProperty("gain", gain, nullptr);
     juce::MemoryOutputStream stream(destData, false);
     tree.writeToStream(stream);
-    // if there are many parameters, you can use the following code to convert the ValueTree to XML format log
-    // logger->logMessage("store parameters to memory block:\n" + juce::String(tree.toXmlString()));
-    logger->logMessage("store parameters to memory block:");
-    logger->logMessage("    bypassEnable: " + juce::String(bypassEnable ? "true" : "false"));
-    logger->logMessage("    gain: " + juce::String(gain));
+    logger->logMessage("store parameters to memory block:\n    " + juce::String(tree.toXmlString()));
 }
 
 void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -342,16 +335,18 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
     if (tree.isValid()) {
         bypassEnable = tree.getProperty("bypassEnable", bypassEnable);
         gain = tree.getProperty("gain", gain);
-        // if there are many parameters, you can use the following code to convert the ValueTree to XML format log
-        // logger->logMessage("restore parameters from memory block:\n" + juce::String(tree.toXmlString()));
-        logger->logMessage("restore parameters from memory block:");
-        logger->logMessage("    bypassEnable: " + juce::String(bypassEnable ? "true" : "false"));
-        logger->logMessage("    gain: " + juce::String(gain));
-        int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
-        if (ret != 0) {
-            logger->logMessage("Failed to algo_set_param. ret = " + juce::String(ret));
+        if (algo_handle != nullptr) {
+            int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
+            if (ret != 0) {
+                logger->logMessage("Failed to algo_set_param. ret = " + juce::String(ret));
+            }
         }
     }
+
+    if (auto *editor = dynamic_cast<DemoAudioProcessorEditor *>(getActiveEditor())) {
+        editor->updateParameterDisplays();
+    }
+    logger->logMessage("restore parameters from memory block:\n    " + juce::String(tree.toXmlString()));
 }
 
 //==============================================================================
