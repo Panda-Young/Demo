@@ -7,8 +7,8 @@
  **************************************************************************/
 
 #include "gain_control.h"
-#include "log.h"
 #include <math.h>
+#include "../Logger.h"
 
 // Define minimum and maximum values for the gain factor
 #define MIN_GAIN_FACTOR 0.00001f // A value close to 0 but not 0, to avoid division by zero or extremely small gains
@@ -18,7 +18,7 @@ float dBChangeToFactor(float dBChange)
 {
     // Check the validity of dBChange
     if (isnan(dBChange) || isinf(dBChange)) {
-        LOGE("Invalid dBChange value: %f, returning default value: 1.0", dBChange);
+        LOG_MSG_CF(LOG_ERROR, "Invalid dBChange value: %f, returning default value: 1.0", dBChange);
         // If dBChange is NaN or infinite, return an error value or a default value
         return 1.0f; // Alternatively, one could choose to return MIN_GAIN_FACTOR or MAX_GAIN_FACTOR, depending on the requirement
     }

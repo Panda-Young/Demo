@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <sstream>
 #include <windows.h>
+#include <juce_core/juce_core.h>
 
 LogLevel globalLogLevel = LOG_INFO;
 juce::FileLogger *globalLogger = nullptr;
@@ -36,12 +37,24 @@ const char *getLogLevelString(LogLevel level)
     }
 }
 
-std::string getCurrentTimeString()
-{
-    std::time_t now = std::time(nullptr);
-    std::tm *now_tm = std::localtime(&now);
+std::string getCurrentTimeString() {
+    auto now = juce::Time::getCurrentTime();
+    auto millis = now.toMilliseconds();
+    auto seconds = millis / 1000;
+    auto ms = millis % 1000;
+
+    std::time_t timeT = static_cast<std::time_t>(seconds);
+    std::tm localTime;
+#if JUCE_WINDOWS
+    localtime_s(&localTime, &timeT);
+#else
+    localtime_r(&timeT, &localTime);
+#endif
+
     std::ostringstream oss;
-    oss << std::put_time(now_tm, "%Y/%m/%d %H:%M:%S");
+    oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+    oss << "." << std::setw(3) << std::setfill('0') << ms;
+
     return oss.str();
 }
 

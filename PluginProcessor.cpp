@@ -17,8 +17,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
+#include <windows.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.26"
+#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.30"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 extern juce::FileLogger *globalLogger;
@@ -37,10 +38,18 @@ DemoAudioProcessor::DemoAudioProcessor()
 #endif
 {
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-    juce::File logFile = tempDir.getChildFile("Demo_VST_Plugin.log");
+    char logFileName[64] = JucePlugin_Name;
+    strcat(logFileName, "_VST_Plugin.log");
+    juce::File logFile = tempDir.getChildFile(juce::String(logFileName));
     logger = std::make_unique<juce::FileLogger>(logFile, VST_PLUGIN_VERSION_STRING);
     globalLogger = logger.get();
     set_log_level(LOG_INFO);
+
+    juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+    LOG_MSG_CF(LOG_INFO, "dllPath=%s", dllPath.getFullPathName().toRawUTF8());
+    char hostAppPath[1024] = {0};
+    GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
+    LOG_MSG_CF(LOG_INFO, "hostAppPath=%s", hostAppPath);
 
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
