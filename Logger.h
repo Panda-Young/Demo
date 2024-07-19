@@ -38,6 +38,13 @@ extern LogLevel globalLogLevel;
 
 void log_msg_c(LogLevel level, const char *message, const char *file, const char *function, int line);
 
+#define LOG_MSG_CF(level, format, ...)                                       \
+    do {                                                                     \
+        char log_temp_buf[256] = {0};                                        \
+        snprintf(log_temp_buf, sizeof(log_temp_buf), format, ##__VA_ARGS__); \
+        LOG_MSG_C(level, log_temp_buf);                                      \
+    } while (0)
+
 #ifdef __cplusplus
 }
 void set_log_level(LogLevel level);

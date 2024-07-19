@@ -18,7 +18,7 @@
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.24"
+#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.26"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 extern juce::FileLogger *globalLogger;
