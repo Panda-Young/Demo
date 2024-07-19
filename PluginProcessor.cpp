@@ -17,10 +17,11 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
-#include <windows.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo Version 1.2.9"
+#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.19"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
+
+extern juce::FileLogger *globalLogger;
 
 //==============================================================================
 DemoAudioProcessor::DemoAudioProcessor()
@@ -38,38 +39,42 @@ DemoAudioProcessor::DemoAudioProcessor()
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
     juce::File logFile = tempDir.getChildFile("Demo_VST_Plugin.log");
     logger = std::make_unique<juce::FileLogger>(logFile, VST_PLUGIN_VERSION_STRING);
+    globalLogger = logger.get();
+    set_log_level(LOG_INFO);
 
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
         if (write_buf[i] == nullptr) {
-            logger->logMessage("Failed to allocate write_buf[" + juce::String(i) + "]");
+            LOG_MSG(LOG_ERROR, "Failed to allocate write_buf[" + std::to_string(i) + "]");
         }
         read_buf[i] = (float *)calloc(block_size, sizeof(float));
         if (read_buf[i] == nullptr) {
-            logger->logMessage("Failed to allocate read_buf[" + juce::String(i) + "]");
+            LOG_MSG(LOG_ERROR, "Failed to allocate read_buf[" + std::to_string(i) + "]");
         }
     }
     InputBuffer = (float *)calloc(block_size * 2, sizeof(float));
     if (InputBuffer == nullptr) {
-        logger->logMessage("Failed to allocate InputBuffer");
+        LOG_MSG(LOG_ERROR, "Failed to allocate InputBuffer");
     }
     OutputBuffer = (float *)calloc(block_size * 2, sizeof(float));
     if (OutputBuffer == nullptr) {
-        logger->logMessage("Failed to allocate OutputBuffer");
+        LOG_MSG(LOG_ERROR, "Failed to allocate OutputBuffer");
     }
 
     char version[32] = {0};
     int ret = 0;
     ret = get_algo_version(version);
     if (ret != 0) {
-        logger->logMessage("Failed to get_algo_version. ret = " + juce::String(ret));
+        LOG_MSG(LOG_ERROR, "Failed to get_algo_version. ret = " + std::to_string(ret));
     } else {
-        logger->logMessage("get_algo_version: " + juce::String(version));
+        std::ostringstream oss;
+        oss << "get_algo_version: " << version;
+        LOG_MSG(LOG_INFO, oss.str());
     }
 
     algo_handle = algo_init();
     if (algo_handle == nullptr) {
-        logger->logMessage("Failed to algo_init");
+        LOG_MSG(LOG_ERROR, "Failed to algo_init");
         return;
     }
 }
@@ -99,24 +104,27 @@ DemoAudioProcessor::~DemoAudioProcessor()
         algo_handle = nullptr;
     }
 
-    logger->logMessage("AudioProcessor destroyed");
+    LOG_MSG(LOG_INFO, "AudioProcessor destroyed");
     logger = nullptr;
 }
 
 //==============================================================================
 const juce::String DemoAudioProcessor::getName() const
 {
-    logger->logMessage("getName: " + juce::String(JucePlugin_Name));
+    std::ostringstream oss;
+    oss << "getName: " << JucePlugin_Name;
+    LOG_MSG(LOG_INFO, oss.str());
+
     return JucePlugin_Name;
 }
 
 bool DemoAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
-    // logger->logMessage("acceptsMidi: true");
+    LOG_MSG(LOG_DEBUG, "acceptsMidi: true");
     return true;
    #else
-    // logger->logMessage("acceptsMidi: false");
+    LOG_MSG(LOG_DEBUG, "acceptsMidi: false");
     return false;
    #endif
 }
@@ -124,10 +132,10 @@ bool DemoAudioProcessor::acceptsMidi() const
 bool DemoAudioProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
-//    logger->logMessage("producesMidi: true");
+   LOG_MSG(LOG_DEBUG, "producesMidi: true");
     return true;
    #else
-    // logger->logMessage("producesMidi: false");
+    LOG_MSG(LOG_DEBUG, "producesMidi: false");
     return false;
    #endif
 }
@@ -135,10 +143,10 @@ bool DemoAudioProcessor::producesMidi() const
 bool DemoAudioProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
-    // logger->logMessage("isMidiEffect: true");
+    LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
     return true;
    #else
-    // logger->logMessage("isMidiEffect: false");
+    LOG_MSG(LOG_DEBUG, "isMidiEffect: false");
     return false;
    #endif
 }
@@ -146,41 +154,43 @@ bool DemoAudioProcessor::isMidiEffect() const
 double DemoAudioProcessor::getTailLengthSeconds() const
 {
     if (sampleRate == 0) {
-        logger->logMessage("getTailLengthSeconds: 0");
+        LOG_MSG(LOG_INFO, "getTailLengthSeconds: 0");
         return 0;
     }
     double tailLength = static_cast<double>(block_size) / sampleRate;
-    logger->logMessage("getTailLengthSeconds: " + juce::String(tailLength));
+    LOG_MSG(LOG_INFO, "getTailLengthSeconds: " + std::to_string(tailLength));
     return tailLength;
 }
 
 int DemoAudioProcessor::getNumPrograms()
 {
-    logger->logMessage("getNumPrograms: 1");
+    LOG_MSG(LOG_DEBUG, "getNumPrograms: 1");
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
                 // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int DemoAudioProcessor::getCurrentProgram()
 {
-    logger->logMessage("getCurrentProgram: 0");
+    LOG_MSG(LOG_DEBUG, "getCurrentProgram: 0");
     return 0;
 }
 
 void DemoAudioProcessor::setCurrentProgram (int index)
 {
-    logger->logMessage("setCurrentProgram: index=" + juce::String(index));
+    LOG_MSG(LOG_INFO, "setCurrentProgram: index=" + std::to_string(index));
 }
 
 const juce::String DemoAudioProcessor::getProgramName (int index)
 {
-    logger->logMessage("getProgramName: index=" + juce::String(index));
+    LOG_MSG(LOG_INFO, "getProgramName: index=" + std::to_string(index));
     return {};
 }
 
 void DemoAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
-    logger->logMessage("changeProgramName: index=" + juce::String(index) + ", newName=" + newName);
+    std::ostringstream oss;
+    oss << "changeProgramName: index=" << index << ", newName=" << newName.toStdString();
+    LOG_MSG(LOG_INFO, oss.str());
 }
 
 //==============================================================================
@@ -189,15 +199,15 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     this->sampleRate = sampleRate;
-    logger->logMessage("prepareToPlay: sampleRate=" + juce::String(sampleRate) +
-                       ", samplesPerBlock=" + juce::String(samplesPerBlock));
+    LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
+                       ", samplesPerBlock=" + std::to_string(samplesPerBlock));
 }
 
 void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    logger->logMessage("releaseResources");
+    LOG_MSG(LOG_INFO, "released Resources");
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -217,8 +227,8 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
         return false;
    #endif
 
-    logger->logMessage("isBusesLayoutSupported: Output: " + juce::String(layouts.getMainOutputChannelSet().size()) +
-                       " channels, Input: " + juce::String(layouts.getMainInputChannelSet().size()) + " channels");
+    LOG_MSG(LOG_DEBUG, "OutputChannelSet=" + std::to_string(layouts.getMainOutputChannelSet().size()) +
+                       ", InputChannelSet=" + std::to_string(layouts.getMainInputChannelSet().size()));
     return true;
   #endif
 }
@@ -236,7 +246,9 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     int numSamples = buffer.getNumSamples();
     if (ProcessCounter++ == 0) {
-        logger->logMessage("processBlock: numSamples=" + juce::String(numSamples));
+        LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples));
+        LOG_MSG(LOG_INFO, "totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
+                           ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels));
     }
 
     int buffer_index = 0;
@@ -271,7 +283,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             }
             int ret = algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2);
             if (ret != 0) {
-                logger->logMessage("Failed to algo_process. ret = " + juce::String(ret));
+                LOG_MSG(LOG_ERROR, "Failed to algo_process. ret = " + std::to_string(ret));
             }
             for (int i = 0; i < 2; i++) {
                 memcpy(write_buf[i], OutputBuffer + (i * block_size), block_size * sizeof(float));
@@ -296,20 +308,20 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
     }
     clock_t stop = clock();
-    logger->logMessage("ProcessCounter = " + juce::String(ProcessCounter) +
-                       ", elapsed time: " + juce::String((double)(stop - start)) + " ms");
+    LOG_MSG(LOG_DEBUG, "ProcessCounter = " + std::to_string(ProcessCounter) +
+                       ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
 }
 
 //==============================================================================
 bool DemoAudioProcessor::hasEditor() const
 {
-    logger->logMessage("hasEditor: true");
+    LOG_MSG(LOG_INFO, "hasEditor: true");
     return true; // (change this to false if you choose to not supply an editor)
 }
 
 juce::AudioProcessorEditor* DemoAudioProcessor::createEditor()
 {
-    logger->logMessage("createEditor");
+    LOG_MSG(LOG_INFO, "createEditor");
     return new DemoAudioProcessorEditor (*this);
 }
 
@@ -324,7 +336,10 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     tree.setProperty("gain", gain, nullptr);
     juce::MemoryOutputStream stream(destData, false);
     tree.writeToStream(stream);
-    logger->logMessage("store parameters to memory block:\n    " + juce::String(tree.toXmlString()));
+
+    std::ostringstream oss;
+    oss << "store parameters to memory block:\n    " << tree.toXmlString();
+    LOG_MSG(LOG_INFO, oss.str());
 }
 
 void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -338,7 +353,7 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         if (algo_handle != nullptr) {
             int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
             if (ret != 0) {
-                logger->logMessage("Failed to algo_set_param. ret = " + juce::String(ret));
+                LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
             }
         }
     }
@@ -346,7 +361,10 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
     if (auto *editor = dynamic_cast<DemoAudioProcessorEditor *>(getActiveEditor())) {
         editor->updateParameterDisplays();
     }
-    logger->logMessage("restore parameters from memory block:\n    " + juce::String(tree.toXmlString()));
+
+    std::ostringstream oss;
+    oss << "restore parameters from memory block:\n    " << tree.toXmlString();
+    LOG_MSG(LOG_INFO, oss.str());
 }
 
 //==============================================================================

@@ -31,6 +31,9 @@
 #define SLIDER_TEXTBOX_WIDTH 100
 #define SLIDER_TEXTBOX_HEIGHT 20
 
+#define ENABLE_COLOR juce::Colours::lightgreen
+#define DISABLE_COLOR juce::Colours::lightslategrey
+
 //==============================================================================
 DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
@@ -38,26 +41,24 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     BypassButton.setButtonText("Bypass");
-    BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? juce::Colours::lightgreen : juce::Colours::lightslategrey);
-    BypassButton.setBounds(UI_WIDTH / 2 - BUTTON_WiDTH / 2, ((UI_HEIGHT / 4) * 3) - (BUTTON_HEIGHT / 2), BUTTON_WiDTH, BUTTON_HEIGHT);
+    BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
     BypassButton.addListener(this);
     addAndMakeVisible(BypassButton);
 
     GainSlider.setSliderStyle(juce::Slider::Rotary);
     GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
-    GainSlider.setBounds(UI_WIDTH / 2 - SLIDER_WIDTH / 2, MARGIN + BUTTON_HEIGHT + MARGIN, SLIDER_WIDTH, SLIDER_HEIGHT);
-    GainSlider.setRange(-20.0, 20.0, 0.1);
+    GainSlider.setRange(-20.0f, 20.0f, 0.1f);
     GainSlider.setValue(audioProcessor.gain);
     GainSlider.addListener(this);
     addAndMakeVisible(GainSlider);
 
     setSize(UI_WIDTH, UI_HEIGHT);
-    audioProcessor.logger->logMessage("UI initialized");
+    LOG_MSG(LOG_INFO, "UI initialized");
 }
 
 DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
 {
-    audioProcessor.logger->logMessage("UI destroyed");
+    LOG_MSG(LOG_INFO, "UI destroyed");
 }
 
 //==============================================================================
@@ -65,22 +66,26 @@ void DemoAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-    // audioProcessor.logger->logMessage("UI painted");
+    // LOG_MSG(LOG_INFO, "UI painted");
 }
 
 void DemoAudioProcessorEditor::resized()
 {
+    auto bounds = getLocalBounds().reduced(MARGIN);
+    BypassButton.setBounds((UI_WIDTH - BUTTON_WiDTH) / 2, UI_HEIGHT - (BUTTON_HEIGHT + MARGIN), BUTTON_WiDTH, BUTTON_HEIGHT);
+    GainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, UI_HEIGHT / 2 - SLIDER_HEIGHT, SLIDER_WIDTH, SLIDER_HEIGHT);
+
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
-    audioProcessor.logger->logMessage("UI resized");
+    LOG_MSG(LOG_INFO, "UI resized");
 }
 
 void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
 {
     if (button == &BypassButton) {
         audioProcessor.bypassEnable = !audioProcessor.bypassEnable;
-        BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? juce::Colours::lightgreen : juce::Colours::lightslategrey);
-        audioProcessor.logger->logMessage("Bypass is " + juce::String(audioProcessor.bypassEnable ? "enabled" : "disabled"));
+        BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
+        LOG_MSG(LOG_INFO, "Bypass is " + audioProcessor.bypassEnable ? "enabled" : "disabled");
     }
 }
 
@@ -90,9 +95,9 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
         audioProcessor.gain = GainSlider.getValue();
         int ret = algo_set_param(audioProcessor.algo_handle, ALGO_PARAM2, &audioProcessor.gain, sizeof(float));
         if (ret != E_OK) {
-            audioProcessor.logger->logMessage("algo_set_param failed. ret = " + juce::String(ret));
+            LOG_MSG(LOG_INFO, "algo_set_param failed. ret = " + std::to_string(ret));
         } else {
-            audioProcessor.logger->logMessage("Gain has been set to " + juce::String(audioProcessor.gain) + " dB");
+            LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(audioProcessor.gain) + " dB");
         }
     }
 }
@@ -100,6 +105,6 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 void DemoAudioProcessorEditor::updateParameterDisplays()
 {
     GainSlider.setValue(audioProcessor.gain, juce::NotificationType::dontSendNotification);
-    BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? juce::Colours::lightgreen : juce::Colours::lightslategrey);
-    audioProcessor.logger->logMessage("Parameter displays updated from restored state");
+    BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
+    LOG_MSG(LOG_INFO, "Parameter displays updated from restored state");
 }
