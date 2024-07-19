@@ -19,7 +19,6 @@
 #include <JucePluginDefines.h>
 #include <windows.h>
 
-#define VST_PLUGIN_VERSION_STRING "Demo VST Plugin Version 1.2.30"
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 extern juce::FileLogger *globalLogger;
@@ -41,7 +40,9 @@ DemoAudioProcessor::DemoAudioProcessor()
     char logFileName[64] = JucePlugin_Name;
     strcat(logFileName, "_VST_Plugin.log");
     juce::File logFile = tempDir.getChildFile(juce::String(logFileName));
-    logger = std::make_unique<juce::FileLogger>(logFile, VST_PLUGIN_VERSION_STRING);
+    char logStartMsg[128] = {0};
+    sprintf(logStartMsg, "%s VST Plugin %s", JucePlugin_Name, JucePlugin_VersionString);
+    logger = std::make_unique<juce::FileLogger>(logFile, logStartMsg);
     globalLogger = logger.get();
     set_log_level(LOG_INFO);
 
@@ -343,12 +344,11 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     juce::ValueTree tree("DemoAudioProcessor");
     tree.setProperty("bypassEnable", bypassEnable, nullptr);
     tree.setProperty("gain", gain, nullptr);
+    tree.setProperty("globalLogLevel", globalLogLevel, nullptr);
     juce::MemoryOutputStream stream(destData, false);
     tree.writeToStream(stream);
 
-    std::ostringstream oss;
-    oss << "store parameters to memory block:\n    " << tree.toXmlString();
-    LOG_MSG(LOG_INFO, oss.str());
+    LOG_MSG(LOG_INFO, "store parameters to memory block:\n    " + tree.toXmlString().toStdString());
 }
 
 void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -359,6 +359,11 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
     if (tree.isValid()) {
         bypassEnable = tree.getProperty("bypassEnable", bypassEnable);
         gain = tree.getProperty("gain", gain);
+        int logLevel = tree.getProperty("globalLogLevel", globalLogLevel);
+        if (logLevel != globalLogLevel) {
+            globalLogLevel = (LogLevel)logLevel;
+            set_log_level(globalLogLevel);
+        }
         if (algo_handle != nullptr) {
             int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
             if (ret != 0) {
@@ -367,9 +372,7 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         }
     }
 
-    std::ostringstream oss;
-    oss << "restore parameters from memory block:\n    " << tree.toXmlString();
-    LOG_MSG(LOG_INFO, oss.str());
+    LOG_MSG(LOG_INFO, "restore parameters from memory block:\n    " + tree.toXmlString().toStdString());
 
     if (auto *editor = dynamic_cast<DemoAudioProcessorEditor *>(getActiveEditor())) {
         editor->updateParameterDisplays();
