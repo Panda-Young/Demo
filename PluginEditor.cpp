@@ -54,19 +54,12 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
 
     // Initialize ComboBox but don't make it visible yet
     DebugButton.setLookAndFeel(&customLookAndFeel);
-    logLevelComboBox.addItem("DEBUG", 1);
-    logLevelComboBox.addItem("INFO", 2);
-    logLevelComboBox.addItem("WARN", 3);
-    logLevelComboBox.addItem("ERROR", 4);
-    if (globalLogLevel == LOG_DEBUG) {
-        logLevelComboBox.setSelectedId(1);
-    } else if (globalLogLevel == LOG_INFO) {
-        logLevelComboBox.setSelectedId(2);
-    } else if (globalLogLevel == LOG_WARN) {
-        logLevelComboBox.setSelectedId(3);
-    } else if (globalLogLevel == LOG_ERROR) {
-        logLevelComboBox.setSelectedId(4);
-    }
+    logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
+    logLevelComboBox.addItem("INFO", LOG_INFO);
+    logLevelComboBox.addItem("WARN", LOG_WARN);
+    logLevelComboBox.addItem("ERROR", LOG_ERROR);
+    logLevelComboBox.addItem("OFF", LOG_OFF);
+    logLevelComboBox.setSelectedId(globalLogLevel);
     addAndMakeVisible(logLevelComboBox);
     logLevelComboBox.setVisible(false);
     logLevelComboBox.addListener(this);
@@ -143,24 +136,13 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
 {
     if (comboBox == &logLevelComboBox) {
-        int selectedId = logLevelComboBox.getSelectedId();
-        switch (selectedId) {
-            case 1:
-                globalLogLevel = LOG_DEBUG;
-                break;
-            case 2:
+        if (logLevelComboBox.getSelectedId() != globalLogLevel) {
+            globalLogLevel = (LogLevel)logLevelComboBox.getSelectedId();
+            if (globalLogLevel < LOG_DEBUG || globalLogLevel > LOG_OFF) {
                 globalLogLevel = LOG_INFO;
-                break;
-            case 3:
-                globalLogLevel = LOG_WARN;
-                break;
-            case 4:
-                globalLogLevel = LOG_ERROR;
-                break;
-            default:
-                break;
+            }
+            LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
         }
-        LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
     }
 }
 
@@ -168,5 +150,6 @@ void DemoAudioProcessorEditor::updateParameterDisplays()
 {
     GainSlider.setValue(audioProcessor.gain, juce::NotificationType::dontSendNotification);
     BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
+    logLevelComboBox.setSelectedId(globalLogLevel, juce::NotificationType::dontSendNotification);
     LOG_MSG(LOG_INFO, "Parameter displays updated from restored state");
 }

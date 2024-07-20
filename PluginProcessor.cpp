@@ -362,6 +362,9 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         int logLevel = tree.getProperty("globalLogLevel", globalLogLevel);
         if (logLevel != globalLogLevel) {
             globalLogLevel = (LogLevel)logLevel;
+            if (globalLogLevel < LOG_DEBUG || globalLogLevel > LOG_OFF) {
+                globalLogLevel = LOG_INFO;
+            }
             set_log_level(globalLogLevel);
         }
         if (algo_handle != nullptr) {

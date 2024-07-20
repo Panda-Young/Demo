@@ -21,10 +21,11 @@
 #endif
 
 typedef enum LogLevel {
-    LOG_DEBUG,
+    LOG_DEBUG = 1,
     LOG_INFO,
     LOG_WARN,
-    LOG_ERROR
+    LOG_ERROR,
+    LOG_OFF
 } LogLevel;
 
 #ifdef __cplusplus
