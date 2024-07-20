@@ -75,6 +75,7 @@ public:
 
 private:
     //==============================================================================
+    bool EditorCreated = false;
     double sampleRate = 0; // default sample rate
 
     const int block_size = 2048;
