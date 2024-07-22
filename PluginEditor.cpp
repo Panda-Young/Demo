@@ -17,6 +17,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
+#include <Windows.h>
 
 #define UI_WIDTH 400
 #define UI_HEIGHT 300
@@ -72,6 +73,11 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     addAndMakeVisible(GainSlider);
 
     setSize(UI_WIDTH, UI_HEIGHT);
+    if (audioProcessor.pluginType == 3 && audioProcessor.hostAppVersion <= 2020) {
+        float scaleFactor = GetDpiForSystem() / 96.0f; // DPI scaling for Windows
+        setSize(UI_WIDTH * scaleFactor, UI_HEIGHT * scaleFactor);
+    }
+
     LOG_MSG(LOG_INFO, "UI initialized");
 }
 
@@ -97,8 +103,8 @@ void DemoAudioProcessorEditor::resized()
     auto bounds = getLocalBounds().reduced(MARGIN);
     GainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, UI_HEIGHT / 2 - SLIDER_HEIGHT, SLIDER_WIDTH, SLIDER_HEIGHT);
     BypassButton.setBounds((UI_WIDTH - BUTTON_WiDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WiDTH, BUTTON_HEIGHT);
-    DebugButton.setBounds(getWidth() - BUTTON_WiDTH - MARGIN, getHeight() - BUTTON_HEIGHT - MARGIN, BUTTON_WiDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WiDTH) / 2, getHeight() - BUTTON_HEIGHT - MARGIN, BUTTON_WiDTH, BUTTON_HEIGHT);
+    DebugButton.setBounds(0, BypassButton.getY() + BypassButton.getHeight() + MARGIN * 4, BUTTON_WiDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WiDTH) / 2, DebugButton.getY(), BUTTON_WiDTH, BUTTON_HEIGHT);
 
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..

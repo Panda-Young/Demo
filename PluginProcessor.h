@@ -68,6 +68,8 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     std::unique_ptr<juce::FileLogger> logger;
+    int pluginType = -1;
+    int hostAppVersion = -1;
 
     void *algo_handle = nullptr;
     bool bypassEnable = false;

@@ -18,12 +18,36 @@
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
 #include <windows.h>
+#include <string>
+#include <regex>
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 extern juce::FileLogger *globalLogger;
 
 //==============================================================================
+int getPluginType(const std::string& dllPath) {
+    auto pos = dllPath.rfind('.');
+    if (pos != std::string::npos) {
+        auto extension = dllPath.substr(pos);
+        if (extension == ".dll") {
+            return 2;
+        } else if (extension == ".vst3") {
+            return 3;
+        }
+    }
+    return -1;
+}
+
+int getAuditionVersion(const std::string& hostAppPath) {
+    std::regex versionRegex(R"(Adobe Audition (\d+))");
+    std::smatch matches;
+    if (std::regex_search(hostAppPath, matches, versionRegex) && matches.size() > 1) {
+        return std::stoi(matches[1]);
+    }
+    return -1;
+}
+
 DemoAudioProcessor::DemoAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
@@ -48,9 +72,12 @@ DemoAudioProcessor::DemoAudioProcessor()
 
     juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
     LOG_MSG_CF(LOG_INFO, "dllPath=%s", dllPath.getFullPathName().toRawUTF8());
+    pluginType = getPluginType(dllPath.getFullPathName().toStdString());
+
     char hostAppPath[1024] = {0};
     GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
     LOG_MSG_CF(LOG_INFO, "hostAppPath=%s", hostAppPath);
+    hostAppVersion = getAuditionVersion(hostAppPath);
 
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
@@ -211,6 +238,7 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     this->sampleRate = sampleRate;
     LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
                        ", samplesPerBlock=" + std::to_string(samplesPerBlock));
+    ProcessCounter = 0;
 }
 
 void DemoAudioProcessor::releaseResources()
@@ -218,6 +246,7 @@ void DemoAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     LOG_MSG(LOG_INFO, "released Resources");
+    ProcessCounter = 0;
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -332,7 +361,7 @@ bool DemoAudioProcessor::hasEditor() const
 juce::AudioProcessorEditor* DemoAudioProcessor::createEditor()
 {
     EditorCreated = true;
-    LOG_MSG(LOG_INFO, "Editor has been created");
+    LOG_MSG(LOG_INFO, "create editor");
     return new DemoAudioProcessorEditor (*this);
 }
 
@@ -346,6 +375,7 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
         // in VST3 plugin, after Constructor and before createEditor, call getStateInformation will store the default parameters
         // This will overwrite the user's last selection.
         // In addition, parameter modifications only occur on the Editor.
+        LOG_MSG(LOG_WARN, "Editor has not been created, skip store parameters to memory block");
         return;
     }
 
