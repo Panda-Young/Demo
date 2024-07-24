@@ -142,7 +142,8 @@ DemoAudioProcessor::~DemoAudioProcessor()
     }
 
     LOG_MSG(LOG_INFO, "AudioProcessor destroyed");
-    logger = nullptr;
+    logger.reset();
+    globalLogger = nullptr;
 }
 
 //==============================================================================

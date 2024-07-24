@@ -58,7 +58,7 @@ std::string getCurrentTimeString() {
     return oss.str();
 }
 
-void logMsg(juce::FileLogger &logger, LogLevel level, const std::string &message, const char *file, const char *function, int line)
+void logMsg(juce::FileLogger *logger, LogLevel level, const std::string &message, const char *file, const char *function, int line)
 {
     if (level < globalLogLevel) {
         return;
@@ -77,14 +77,16 @@ void logMsg(juce::FileLogger &logger, LogLevel level, const std::string &message
 
     logPrefix += " " + message;
 
-    logger.logMessage(logPrefix);
+    if (logger != nullptr) {
+        logger->logMessage(logPrefix);
+    }
 }
 
 extern "C" {
 void log_msg_c(LogLevel level, const char *message, const char *file, const char *function, int line)
 {
     if (globalLogger != nullptr) {
-        logMsg(*globalLogger, level, message, file, function, line);
+        logMsg(globalLogger, level, message, file, function, line);
     }
 }
 }
