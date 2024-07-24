@@ -124,6 +124,7 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
             DebugButtonClickedTimes = 0;
         }
     }
+    audioProcessor.anyParamChanged = true;
 }
 
 void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
@@ -137,6 +138,7 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
             LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(audioProcessor.gain) + " dB");
         }
     }
+    audioProcessor.anyParamChanged = true;
 }
 
 void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
@@ -150,6 +152,7 @@ void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
             LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
         }
     }
+    audioProcessor.anyParamChanged = true;
 }
 
 void DemoAudioProcessorEditor::updateParameterDisplays()

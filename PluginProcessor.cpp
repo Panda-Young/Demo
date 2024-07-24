@@ -361,7 +361,6 @@ bool DemoAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* DemoAudioProcessor::createEditor()
 {
-    EditorCreated = true;
     LOG_MSG(LOG_INFO, "create editor");
     return new DemoAudioProcessorEditor (*this);
 }
@@ -372,11 +371,10 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
-    if (EditorCreated == false) {
-        // in VST3 plugin, after Constructor and before createEditor, call getStateInformation will store the default parameters
+    if (anyParamChanged == false) {
+        // in VST3 plugin, before restore parameters, call getStateInformation will store the default parameters
         // This will overwrite the user's last selection.
-        // In addition, parameter modifications only occur on the Editor.
-        LOG_MSG(LOG_WARN, "Editor has not been created, skip store parameters to memory block");
+        LOG_MSG(LOG_INFO, "none of the parameters have been changed, skip store parameters to memory block");
         return;
     }
 

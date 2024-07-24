@@ -70,6 +70,7 @@ public:
     std::unique_ptr<juce::FileLogger> logger;
     int pluginType = -1;
     int hostAppVersion = -1;
+    bool anyParamChanged = false;
 
     void *algo_handle = nullptr;
     bool bypassEnable = false;
@@ -77,7 +78,6 @@ public:
 
 private:
     //==============================================================================
-    bool EditorCreated = false;
     double sampleRate = 0; // default sample rate
 
     const int block_size = 2048;
