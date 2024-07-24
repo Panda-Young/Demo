@@ -276,10 +276,6 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 
 void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    if (bypassEnable) {
-        return;
-    }
-
     clock_t start = clock();
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
@@ -316,14 +312,18 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             }
         }
         if (write_index == block_size) {
-            if (isFirstAlgoFrame++ == 0) {
-            //     _sleep(600);
-            // } else {
-            //     _sleep(32);
-            }
-            int ret = algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2);
-            if (ret != 0) {
-                LOG_MSG(LOG_ERROR, "Failed to algo_process. ret = " + std::to_string(ret));
+            if (bypassEnable) {
+                memcpy(OutputBuffer, InputBuffer, block_size * 2 * sizeof(float));
+            } else {
+                if (isFirstAlgoFrame++ == 0) {
+                //     _sleep(600);
+                // } else {
+                //     _sleep(32);
+                }
+                int ret = algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2);
+                if (ret != 0) {
+                    LOG_MSG(LOG_ERROR, "Failed to algo_process. ret = " + std::to_string(ret));
+                }
             }
             for (int i = 0; i < 2; i++) {
                 memcpy(write_buf[i], OutputBuffer + (i * block_size), block_size * sizeof(float));

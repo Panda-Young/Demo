@@ -116,7 +116,8 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
     if (button == &BypassButton) {
         audioProcessor.bypassEnable = !audioProcessor.bypassEnable;
         BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
-        LOG_MSG(LOG_INFO, "Bypass is " + audioProcessor.bypassEnable ? "enabled" : "disabled");
+        std::string msg = "Bypass is " + std::string(audioProcessor.bypassEnable ? "enabled" : "disabled");
+        LOG_MSG(LOG_INFO, msg);
     } else if (button == &DebugButton) {
         DebugButtonClickedTimes++;
         if (DebugButtonClickedTimes == 5) {
