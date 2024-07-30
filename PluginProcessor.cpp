@@ -39,11 +39,28 @@ int getPluginType(const std::string& dllPath) {
     return -1;
 }
 
+std::string extractHostAppName(const char *hostAppPath)
+{
+    std::string path(hostAppPath);
+    auto pos = path.find_last_of('\\');
+    std::string tempHostAppName = (pos != std::string::npos) ? path.substr(pos + 1) : path;
+
+    pos = tempHostAppName.find(".exe");
+    if (pos != std::string::npos) {
+        tempHostAppName = tempHostAppName.substr(0, pos);
+    }
+
+    return tempHostAppName;
+}
+
 int getAuditionVersion(const std::string& hostAppPath) {
     std::regex versionRegex(R"(Adobe Audition (\d+))");
     std::smatch matches;
     if (std::regex_search(hostAppPath, matches, versionRegex) && matches.size() > 1) {
         return std::stoi(matches[1]);
+    }
+    if (hostAppPath.find("Audition") != std::string::npos) {
+        return 0;
     }
     return -1;
 }
@@ -77,6 +94,8 @@ DemoAudioProcessor::DemoAudioProcessor()
     char hostAppPath[1024] = {0};
     GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
     LOG_MSG_CF(LOG_INFO, "hostAppPath=%s", hostAppPath);
+    hostAppName = extractHostAppName(hostAppPath);
+    LOG_MSG_CF(LOG_INFO, "hostAppName=%s", hostAppName.c_str());
     hostAppVersion = getAuditionVersion(hostAppPath);
 
     for (int i = 0; i < 2; i++) {

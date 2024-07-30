@@ -24,7 +24,7 @@
 
 #define MARGIN 10
 
-#define BUTTON_WiDTH 100
+#define BUTTON_WIDTH 100
 #define BUTTON_HEIGHT 30
 
 #define SLIDER_WIDTH 100
@@ -37,8 +37,6 @@
 #define DISABLE_COLOR juce::Colours::lightslategrey
 
 //==============================================================================
-CustomLookAndFeel customLookAndFeel;
-
 DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
@@ -73,7 +71,9 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     addAndMakeVisible(GainSlider);
 
     setSize(UI_WIDTH, UI_HEIGHT);
-    if (audioProcessor.pluginType == 3 && audioProcessor.hostAppVersion <= 2020) {
+    if (audioProcessor.pluginType == 3 &&
+        audioProcessor.hostAppName == "Adobe Audition" &&
+        audioProcessor.hostAppVersion >= 0 && audioProcessor.hostAppVersion <= 2020) {
         float scaleFactor = GetDpiForSystem() / 96.0f; // DPI scaling for Windows
         setSize(UI_WIDTH * scaleFactor, UI_HEIGHT * scaleFactor);
     }
@@ -87,6 +87,7 @@ DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
     DebugButton.removeListener(this);
     logLevelComboBox.removeListener(this);
     GainSlider.removeListener(this);
+    DebugButton.setLookAndFeel(nullptr);
     LOG_MSG(LOG_INFO, "UI destroyed");
 }
 
@@ -102,9 +103,9 @@ void DemoAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced(MARGIN);
     GainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, UI_HEIGHT / 2 - SLIDER_HEIGHT, SLIDER_WIDTH, SLIDER_HEIGHT);
-    BypassButton.setBounds((UI_WIDTH - BUTTON_WiDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WiDTH, BUTTON_HEIGHT);
-    DebugButton.setBounds(0, BypassButton.getY() + BypassButton.getHeight() + MARGIN * 4, BUTTON_WiDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WiDTH) / 2, DebugButton.getY(), BUTTON_WiDTH, BUTTON_HEIGHT);
+    BypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT);
+    DebugButton.setBounds(0, BypassButton.getY() + BypassButton.getHeight() + MARGIN * 4, BUTTON_WIDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, DebugButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
 
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..

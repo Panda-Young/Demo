@@ -69,6 +69,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
     std::unique_ptr<juce::FileLogger> logger;
     int pluginType = -1;
+    std::string hostAppName;
     int hostAppVersion = -1;
     bool anyParamChanged = false;
 

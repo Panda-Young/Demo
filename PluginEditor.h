@@ -58,6 +58,7 @@ private:
     juce::ComboBox logLevelComboBox;
 
     int DebugButtonClickedTimes = 0;
+    CustomLookAndFeel customLookAndFeel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoAudioProcessorEditor)
 };
