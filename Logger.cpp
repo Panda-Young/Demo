@@ -27,9 +27,9 @@ const char *getLogLevelString(LogLevel level)
     case LOG_DEBUG:
         return "DEBUG";
     case LOG_INFO:
-        return "INFO";
+        return "INFO ";
     case LOG_WARN:
-        return "WARN";
+        return "WARN ";
     case LOG_ERROR:
         return "ERROR";
     default:

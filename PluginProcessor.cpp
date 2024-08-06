@@ -95,7 +95,6 @@ DemoAudioProcessor::DemoAudioProcessor()
     GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
     LOG_MSG_CF(LOG_INFO, "hostAppPath=%s", hostAppPath);
     hostAppName = extractHostAppName(hostAppPath);
-    LOG_MSG_CF(LOG_INFO, "hostAppName=%s", hostAppName.c_str());
     hostAppVersion = getAuditionVersion(hostAppPath);
 
     for (int i = 0; i < 2; i++) {
