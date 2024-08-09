@@ -13,8 +13,6 @@
 #define VERSION "0.1.2"
 #define MAX_BUF_SIZE 1024
 
-static char log_temp_buf[256] = {0};
-
 typedef struct algo_handle {
     char param1;
     float param2;
