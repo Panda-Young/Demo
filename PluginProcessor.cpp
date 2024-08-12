@@ -88,12 +88,12 @@ DemoAudioProcessor::DemoAudioProcessor()
     set_log_level(LOG_INFO);
 
     juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
-    LOG_MSG_CF(LOG_INFO, "dllPath=%s", dllPath.getFullPathName().toRawUTF8());
+    LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
     pluginType = getPluginType(dllPath.getFullPathName().toStdString());
 
     char hostAppPath[1024] = {0};
     GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
-    LOG_MSG_CF(LOG_INFO, "hostAppPath=%s", hostAppPath);
+    LOG_MSG_CF(LOG_INFO, "hostAppPath= \"%s\"", hostAppPath);
     hostAppName = extractHostAppName(hostAppPath);
     hostAppVersion = getAuditionVersion(hostAppPath);
 
@@ -159,7 +159,7 @@ DemoAudioProcessor::~DemoAudioProcessor()
         algo_handle = nullptr;
     }
 
-    LOG_MSG(LOG_INFO, "AudioProcessor destroyed");
+    LOG_MSG(LOG_INFO, "AudioProcessor destroyed. Log stop. Closed plugins or software");
     logger.reset();
     globalLogger = nullptr;
 }

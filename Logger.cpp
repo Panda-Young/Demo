@@ -65,10 +65,11 @@ void logMsg(juce::FileLogger *logger, LogLevel level, const std::string &message
     }
     std::string timeStr = getCurrentTimeString();
     int pid = static_cast<int>(::GetCurrentProcessId());
+    int tid = static_cast<int>(::GetCurrentThreadId());
     std::string logLevelStr = getLogLevelString(level);
 
     std::ostringstream oss;
-    oss << timeStr << " [" << pid << "] " << logLevelStr << " " << file << "@" << function << ":" << line;
+    oss << timeStr << " [" << pid << "." << tid << "] " << logLevelStr << " " << file << "@" << function << ":" << line;
 
     std::string logPrefix = oss.str();
     if (logPrefix.length() < 96) {
