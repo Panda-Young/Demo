@@ -66,13 +66,15 @@ void savePCMDatatoDesktop(const std::string &filename, const float *data, size_t
 
     std::ofstream outFile(PCMfullPath.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + PCMfullPath.getFullPathName().toStdString());
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + PCMfullPath.getFullPathName().toStdString() +
+                               ". Reason: " + std::string(strerror(errno)));
         return;
     }
     outFile.write(reinterpret_cast<const char *>(data), numSamples * sizeof(float));
     outFile.close();
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + PCMfullPath.getFullPathName().toStdString());
+        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + PCMfullPath.getFullPathName().toStdString() +
+                               ". Reason: " + std::string(strerror(errno)));
     }
 }
 
@@ -83,13 +85,15 @@ void convertPCMtoWAV(const std::string &filename, uint16_t Num_Channel, uint32_t
 
     std::ifstream pcmFile(PCMfullPath.getFullPathName().toStdString(), std::ios::binary | std::ios::in);
     if (!pcmFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for reading: " + PCMfullPath.getFullPathName().toStdString());
+        LOG_MSG(LOG_ERROR, "Failed to open file for reading: " + PCMfullPath.getFullPathName().toStdString() +
+                               ". Reason: " + std::string(strerror(errno)));
         return;
     }
 
     std::ofstream wavFile(PCMfullPath.getFullPathName().toStdString() + ".wav", std::ios::binary | std::ios::out);
     if (!wavFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + PCMfullPath.getFullPathName().toStdString() + ".wav");
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + PCMfullPath.getFullPathName().toStdString() +
+                               ".wav. Reason: " + std::string(strerror(errno)));
         return;
     }
 

@@ -87,6 +87,9 @@ DemoAudioProcessor::DemoAudioProcessor()
         LOG_MSG(LOG_ERROR, "Failed to algo_init");
         return;
     }
+
+    downSampler.reset();
+    upSampler.reset();
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
@@ -118,6 +121,9 @@ DemoAudioProcessor::~DemoAudioProcessor()
         LOG_MSG(LOG_INFO, "saved PCM to desktop");
         for (int channel = 0; channel < getTotalNumInputChannels(); channel++) {
             convertPCMtoWAV("originalBuffer_" + std::to_string(channel) + ".pcm", 1, originalSampleRate, 32, 3);
+            convertPCMtoWAV("downSampledBuffer_" + std::to_string(channel) + ".pcm", 1, targetSampleRate, 32, 3);
+            convertPCMtoWAV("upSampledBuffer_" + std::to_string(channel) + ".pcm", 1, originalSampleRate, 32, 3);
+            convertPCMtoWAV("processedBuffer_" + std::to_string(channel) + ".pcm", 1, originalSampleRate, 32, 3);
         }
 #endif
 
@@ -275,6 +281,22 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     }
 #endif
 
+#if 1
+    const float downSampledFactor = originalSampleRate / targetSampleRate;
+    const int downSampledNumSamples = (numSamples + downSampledFactor - 1) / downSampledFactor; // Round up to prevent boundary value loss
+    juce::AudioBuffer<float> downSampledBuffer(totalNumInputChannels, downSampledNumSamples);
+    const float upSampledFactor = targetSampleRate / originalSampleRate;
+    juce::AudioBuffer<float> upSampledBuffer(totalNumInputChannels, numSamples);
+
+    for (int channel = 0; channel < totalNumInputChannels; channel++) {
+        downSampler.process(downSampledFactor, buffer.getReadPointer(channel), downSampledBuffer.getWritePointer(channel), downSampledNumSamples);
+        savePCMDatatoDesktop("downSampledBuffer_" + std::to_string(channel) + ".pcm", downSampledBuffer.getReadPointer(channel), downSampledNumSamples);
+        upSampler.process(upSampledFactor, downSampledBuffer.getReadPointer(channel), upSampledBuffer.getWritePointer(channel), numSamples);
+        savePCMDatatoDesktop("upSampledBuffer_" + std::to_string(channel) + ".pcm", upSampledBuffer.getReadPointer(channel), numSamples);
+        buffer.copyFrom(channel, 0, upSampledBuffer.getReadPointer(channel), numSamples);
+        savePCMDatatoDesktop("processedBuffer_" + std::to_string(channel) + ".pcm", buffer.getReadPointer(channel), numSamples);
+    }
+#else
     int buffer_index = 0;
     float *p_write[2] = {0};
     float *p_read[2] = {0};
@@ -332,6 +354,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             read_index = 0;
         }
     }
+#endif
     clock_t stop = clock();
     LOG_MSG(LOG_DEBUG, "ProcessBlockCounter = " + std::to_string(ProcessBlockCounter) +
                        ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
