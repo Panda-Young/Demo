@@ -174,7 +174,7 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     return E_OK;
 }
 
-int algo_process(void *algo_handle, float *input, float *output, int block_size)
+int algo_process(void *algo_handle, const float *input, float *output, int block_size)
 {
     if (algo_handle == NULL) {
         return E_ALGO_HANDLE_NULL;

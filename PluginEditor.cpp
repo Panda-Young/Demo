@@ -42,17 +42,18 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
+    VersionButton.setButtonText(JucePlugin_VersionString);
+    VersionButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
+    VersionButton.addListener(this);
+    addAndMakeVisible(VersionButton);
+    VersionButton.setLookAndFeel(&customLookAndFeel);
+
     BypassButton.setButtonText("Bypass");
-    DebugButton.setButtonText(JucePlugin_VersionString);
     BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
-    DebugButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
     BypassButton.addListener(this);
-    DebugButton.addListener(this);
     addAndMakeVisible(BypassButton);
-    addAndMakeVisible(DebugButton);
 
     // Initialize ComboBox but don't make it visible yet
-    DebugButton.setLookAndFeel(&customLookAndFeel);
     logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
     logLevelComboBox.addItem("INFO", LOG_INFO);
     logLevelComboBox.addItem("WARN", LOG_WARN);
@@ -83,11 +84,12 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
 
 DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
 {
-    BypassButton.removeListener(this);
-    DebugButton.removeListener(this);
+    VersionButton.removeListener(this);
+    VersionButton.setLookAndFeel(nullptr);
     logLevelComboBox.removeListener(this);
+
+    BypassButton.removeListener(this);
     GainSlider.removeListener(this);
-    DebugButton.setLookAndFeel(nullptr);
     LOG_MSG(LOG_INFO, "UI destroyed");
 }
 
@@ -101,14 +103,14 @@ void DemoAudioProcessorEditor::paint (juce::Graphics& g)
 
 void DemoAudioProcessorEditor::resized()
 {
+    // This is generally where you'll want to lay out the positions of any
+    // subcomponents in your editor..
     auto bounds = getLocalBounds().reduced(MARGIN);
     GainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, UI_HEIGHT / 2 - SLIDER_HEIGHT, SLIDER_WIDTH, SLIDER_HEIGHT);
     BypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT);
-    DebugButton.setBounds(0, BypassButton.getY() + BypassButton.getHeight() + MARGIN * 4, BUTTON_WIDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, DebugButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
+    VersionButton.setBounds(0, BypassButton.getY() + BypassButton.getHeight() + MARGIN * 4, BUTTON_WIDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, VersionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
 
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
     LOG_MSG(LOG_INFO, "UI resized");
 }
 
@@ -119,7 +121,7 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
         BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
         std::string msg = "Bypass is " + std::string(audioProcessor.bypassEnable ? "enabled" : "disabled");
         LOG_MSG(LOG_INFO, msg);
-    } else if (button == &DebugButton) {
+    } else if (button == &VersionButton) {
         DebugButtonClickedTimes++;
         if (DebugButtonClickedTimes == 5) {
             logLevelComboBox.setVisible(true);

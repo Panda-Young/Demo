@@ -17,53 +17,12 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
-#include <windows.h>
-#include <string>
-#include <regex>
 
+#define SAVE_PCM_TO_DESKTOP 1
 #define MIN(a, b) (a) < (b) ? (a) : (b)
-
 extern juce::FileLogger *globalLogger;
 
 //==============================================================================
-int getPluginType(const std::string& dllPath) {
-    auto pos = dllPath.rfind('.');
-    if (pos != std::string::npos) {
-        auto extension = dllPath.substr(pos);
-        if (extension == ".dll") {
-            return 2;
-        } else if (extension == ".vst3") {
-            return 3;
-        }
-    }
-    return -1;
-}
-
-std::string extractHostAppName(const char *hostAppPath)
-{
-    std::string path(hostAppPath);
-    auto pos = path.find_last_of('\\');
-    std::string tempHostAppName = (pos != std::string::npos) ? path.substr(pos + 1) : path;
-
-    pos = tempHostAppName.find(".exe");
-    if (pos != std::string::npos) {
-        tempHostAppName = tempHostAppName.substr(0, pos);
-    }
-
-    return tempHostAppName;
-}
-
-int getAuditionVersion(const std::string& hostAppPath) {
-    std::regex versionRegex(R"(Adobe Audition (\d+))");
-    std::smatch matches;
-    if (std::regex_search(hostAppPath, matches, versionRegex) && matches.size() > 1) {
-        return std::stoi(matches[1]);
-    }
-    if (hostAppPath.find("Audition") != std::string::npos) {
-        return 0;
-    }
-    return -1;
-}
 
 DemoAudioProcessor::DemoAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -90,12 +49,8 @@ DemoAudioProcessor::DemoAudioProcessor()
     juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
     LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
     pluginType = getPluginType(dllPath.getFullPathName().toStdString());
-
-    char hostAppPath[1024] = {0};
-    GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
-    LOG_MSG_CF(LOG_INFO, "hostAppPath= \"%s\"", hostAppPath);
-    hostAppName = extractHostAppName(hostAppPath);
-    hostAppVersion = getAuditionVersion(hostAppPath);
+    hostAppName = extractHostAppName();
+    hostAppVersion = getAuditionVersion();
 
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
@@ -159,6 +114,13 @@ DemoAudioProcessor::~DemoAudioProcessor()
         algo_handle = nullptr;
     }
 
+#if SAVE_PCM_TO_DESKTOP
+        LOG_MSG(LOG_INFO, "saved PCM to desktop");
+        for (int channel = 0; channel < getTotalNumInputChannels(); channel++) {
+            convertPCMtoWAV("originalBuffer_" + std::to_string(channel) + ".pcm", 1, originalSampleRate, 32, 3);
+        }
+#endif
+
     LOG_MSG(LOG_INFO, "AudioProcessor destroyed. Log stop. Closed plugins or software");
     logger.reset();
     globalLogger = nullptr;
@@ -209,11 +171,11 @@ bool DemoAudioProcessor::isMidiEffect() const
 
 double DemoAudioProcessor::getTailLengthSeconds() const
 {
-    if (sampleRate == 0) {
+    if (originalSampleRate == 0) {
         LOG_MSG(LOG_INFO, "getTailLengthSeconds: 0");
         return 0;
     }
-    double tailLength = static_cast<double>(block_size) / sampleRate;
+    double tailLength = static_cast<double>(block_size) / originalSampleRate;
     LOG_MSG(LOG_INFO, "getTailLengthSeconds: " + std::to_string(tailLength));
     return tailLength;
 }
@@ -254,10 +216,11 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    this->sampleRate = sampleRate;
+    this->originalSampleRate = sampleRate;
     LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
-                       ", samplesPerBlock=" + std::to_string(samplesPerBlock));
-    ProcessCounter = 0;
+                       ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
+                       ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate ) + " milliseconds");
+    ProcessBlockCounter = 0;
 }
 
 void DemoAudioProcessor::releaseResources()
@@ -265,7 +228,7 @@ void DemoAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     LOG_MSG(LOG_INFO, "released Resources");
-    ProcessCounter = 0;
+    ProcessBlockCounter = 0;
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -276,7 +239,8 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
     return true;
   #else
     // This is the place where you check if the layout is supported.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
+     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
     // This checks if the input layout matches the output layout
@@ -299,11 +263,17 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     int numSamples = buffer.getNumSamples();
-    if (ProcessCounter++ == 0) {
+    if (ProcessBlockCounter++ == 0) {
         LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples));
         LOG_MSG(LOG_INFO, "totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
                            ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels));
     }
+
+#if SAVE_PCM_TO_DESKTOP
+    for (int channel = 0; channel < totalNumInputChannels; channel++) {
+        savePCMDatatoDesktop("originalBuffer_" + std::to_string(channel) + ".pcm", buffer.getReadPointer(channel), numSamples);
+    }
+#endif
 
     int buffer_index = 0;
     float *p_write[2] = {0};
@@ -326,25 +296,22 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         if (write_index == block_size) {
             for (int channel = 0; channel < totalNumInputChannels; ++channel) {
                 memcpy(InputBuffer + (channel * block_size), write_buf[channel], block_size * sizeof(float));
-                memset(write_buf[channel], 0, block_size * sizeof(float));
             }
-        }
-        if (write_index == block_size) {
             if (bypassEnable) {
                 memcpy(OutputBuffer, InputBuffer, block_size * 2 * sizeof(float));
             } else {
                 if (isFirstAlgoFrame++ == 0) {
-                //     _sleep(600);
-                // } else {
-                //     _sleep(32);
+                    _sleep(600);
+                } else {
+                    _sleep(12);
                 }
                 int ret = algo_process(algo_handle, InputBuffer, OutputBuffer, block_size * 2);
                 if (ret != 0) {
                     LOG_MSG(LOG_ERROR, "Failed to algo_process. ret = " + std::to_string(ret));
                 }
             }
-            for (int i = 0; i < 2; i++) {
-                memcpy(write_buf[i], OutputBuffer + (i * block_size), block_size * sizeof(float));
+            for (int channel = 0; channel < totalNumInputChannels; channel++) {
+                memcpy(write_buf[channel], OutputBuffer + (channel * block_size), block_size * sizeof(float));
             }
         }
         for (int i = 0; i < n_samples_to_write; i++) {
@@ -366,7 +333,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
     }
     clock_t stop = clock();
-    LOG_MSG(LOG_DEBUG, "ProcessCounter = " + std::to_string(ProcessCounter) +
+    LOG_MSG(LOG_DEBUG, "ProcessBlockCounter = " + std::to_string(ProcessBlockCounter) +
                        ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
 }
 
@@ -395,8 +362,9 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
         LOG_MSG(LOG_INFO, "none of the parameters have been changed, skip store parameters to memory block");
         return;
     }
-
-    juce::ValueTree tree("DemoAudioProcessor");
+    char dataTreeName[64] = JucePlugin_Name;
+    strcat(dataTreeName, "AudioProcessor");
+    juce::ValueTree tree(dataTreeName);
     tree.setProperty("bypassEnable", bypassEnable, nullptr);
     tree.setProperty("gain", gain, nullptr);
     tree.setProperty("globalLogLevel", globalLogLevel, nullptr);

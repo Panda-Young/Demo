@@ -18,6 +18,7 @@
 
 #include <JuceHeader.h>
 #include "Logger.h"
+#include "Utils.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,6 +68,7 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+
     std::unique_ptr<juce::FileLogger> logger;
     int pluginType = -1;
     std::string hostAppName;
@@ -79,11 +81,11 @@ public:
 
 private:
     //==============================================================================
-    double sampleRate = 0; // default sample rate
+    double originalSampleRate = 0; // default sample rate
+    uint32_t ProcessBlockCounter = 0;
 
     const int block_size = 2048;
     uint32_t isFirstAlgoFrame = 0;
-    uint32_t ProcessCounter = 0;
 
     float *write_buf[2] = {0};
     float *read_buf[2] = {0};
