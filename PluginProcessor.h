@@ -83,6 +83,7 @@ private:
     //==============================================================================
     double originalSampleRate = 0; // default sample rate
     uint32_t ProcessBlockCounter = 0;
+    bool isLicenseValid = false;
 
     const int block_size = 2048;
     uint32_t isFirstAlgoFrame = 0;

@@ -8,8 +8,12 @@
 
 #include "Utils.h"
 #include "Logger.h"
+#include <chrono>
+#include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <regex>
+#include <sstream>
 #include <windows.h>
 
 int getPluginType(const std::string &dllPath)
@@ -139,4 +143,82 @@ void convertPCMtoWAV(const std::string &filename, uint16_t Num_Channel, uint32_t
     if (!PCMfullPath.deleteFile()) {
         LOG_MSG(LOG_ERROR, "Failed to delete PCM file: " + PCMfullPath.getFullPathName().toStdString());
     }
+}
+
+std::string encryptDate(const std::string &date)
+{
+    std::string encrypted = date;
+    const std::string key = "Demo";
+    for (size_t i = 0; i < date.size(); ++i) {
+        encrypted[i] ^= key[i % key.size()];
+    }
+    return encrypted;
+}
+
+std::string decryptDate(const std::string &encryptedDate)
+{
+    return encryptDate(encryptedDate);
+}
+
+std::string getCurrentDateString()
+{
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm now_tm = *std::localtime(&now_time);
+    std::ostringstream oss;
+    oss << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}
+
+std::string getFileCreationDate(const juce::File &file)
+{
+    auto creationTime = file.getCreationTime();
+    std::time_t creation_time_t = creationTime.toMilliseconds() / 1000;
+    std::tm creation_tm = *std::localtime(&creation_time_t);
+    std::ostringstream oss;
+    oss << std::put_time(&creation_tm, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}
+
+bool checkLicenseFile(const juce::File &licenseFile)
+{
+    if (!licenseFile.existsAsFile()) {
+        std::ofstream outFile(licenseFile.getFullPathName().toStdString());
+        std::string currentDate = getCurrentDateString();
+        std::string encryptedDate = encryptDate(currentDate);
+        outFile << encryptedDate;
+        outFile.close();
+        return true;
+    } else {
+        std::ifstream inFile(licenseFile.getFullPathName().toStdString());
+        std::string encryptedDate;
+        std::getline(inFile, encryptedDate);
+        inFile.close();
+        std::string decryptedDate = decryptDate(encryptedDate);
+        std::string fileCreationDate = getFileCreationDate(licenseFile);
+
+        if (decryptedDate != fileCreationDate) {
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                                                   "License Error",
+                                                   "License file is corrupted or tampered.");
+            return false;
+        }
+
+        auto now = std::chrono::system_clock::now();
+        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+        std::tm now_tm = *std::localtime(&now_time);
+        std::istringstream iss(decryptedDate);
+        std::tm creation_tm;
+        iss >> std::get_time(&creation_tm, "%Y-%m-%d %H:%M:%S");
+        auto creation_time = std::chrono::system_clock::from_time_t(std::mktime(&creation_tm));
+        auto duration = std::chrono::duration_cast<std::chrono::hours>(now - creation_time).count();
+
+        if (duration > 7 * 24) {
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                                                   "License Expired",
+                                                   "Your license has expired.");
+            return false;
+        }
+    }
+    return true;
 }

@@ -17,5 +17,6 @@ std::string extractHostAppName();
 int getAuditionVersion();
 void savePCMDatatoDesktop(const std::string &filename, const float *data, size_t numSamples);
 void convertPCMtoWAV(const std::string &filename, uint16_t Num_Channel, uint32_t SampleRate, uint16_t bits_per_sam, uint16_t audioFormat);
+bool checkLicenseFile(const juce::File &licenseFile);
 
 #endif // UTILS_H

@@ -52,6 +52,16 @@ DemoAudioProcessor::DemoAudioProcessor()
     hostAppName = extractHostAppName();
     hostAppVersion = getAuditionVersion();
 
+    char licenseFileName[64] = JucePlugin_Name;
+    strcat(licenseFileName, ".lic");
+    juce::File licenseFile = tempDir.getChildFile(licenseFileName);
+    if (!checkLicenseFile(licenseFile)) {
+        isLicenseValid = false;
+        return;
+    } else {
+        isLicenseValid = true;
+    }
+
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
         if (write_buf[i] == nullptr) {
@@ -263,6 +273,9 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 
 void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    if (isLicenseValid == false) {
+        return;
+    }
     clock_t start = clock();
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
@@ -389,6 +402,9 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 //==============================================================================
 bool DemoAudioProcessor::hasEditor() const
 {
+    if (isLicenseValid == false) {
+        return false;
+    }
     LOG_MSG(LOG_INFO, "hasEditor: true");
     return true; // (change this to false if you choose to not supply an editor)
 }
