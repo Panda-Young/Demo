@@ -95,8 +95,8 @@ private:
     float *OutputBuffer = nullptr;
 
     double targetSampleRate = 16000.0f;
-    juce::WindowedSincInterpolator downSampler;
-    juce::WindowedSincInterpolator upSampler;
+    juce::WindowedSincInterpolator downSampler[2];
+    juce::WindowedSincInterpolator upSampler[2];
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoAudioProcessor)
 };
