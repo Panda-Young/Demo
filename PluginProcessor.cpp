@@ -53,7 +53,7 @@ DemoAudioProcessor::DemoAudioProcessor()
     hostAppVersion = getAuditionVersion();
 
     char licenseFileName[64] = JucePlugin_Name;
-    strcat(licenseFileName, ".lic");
+    strcat(licenseFileName, "_VST_Plugin.lic");
     juce::File licenseFile = tempDir.getChildFile(licenseFileName);
     if (!checkLicenseFile(licenseFile)) {
         isLicenseValid = false;

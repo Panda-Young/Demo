@@ -82,7 +82,8 @@ void savePCMDatatoDesktop(const std::string &filename, const float *data, size_t
     }
 }
 
-void convertPCMtoWAV(const std::string &filename, uint16_t Num_Channel, uint32_t SampleRate, uint16_t bits_per_sam, uint16_t audioFormat)
+void convertPCMtoWAV(const std::string &filename,
+                     uint16_t Num_Channel, uint32_t SampleRate, uint16_t bits_per_sam, uint16_t audioFormat)
 {
     juce::File desktopPath = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
     juce::File PCMfullPath = desktopPath.getChildFile(filename);
@@ -180,7 +181,9 @@ std::string getFileCreationDate(const juce::File &file)
     return oss.str();
 }
 
-bool checkLicenseFile(const juce::File &licenseFile)
+bool checkLicenseFile(const juce::File &licenseFile,
+                      uint32_t nYear, uint32_t nMonth, uint32_t nDay,
+                      uint32_t nHour, uint32_t nMinute, uint32_t nSecond)
 {
     if (!licenseFile.existsAsFile()) {
         std::ofstream outFile(licenseFile.getFullPathName().toStdString());
@@ -188,6 +191,43 @@ bool checkLicenseFile(const juce::File &licenseFile)
         std::string encryptedDate = encryptDate(currentDate);
         outFile << encryptedDate;
         outFile.close();
+
+        // Modify the file creation time: This is necessary because even if the file is deleted and recreated,
+        // the file system might retain the original creation time.
+        HANDLE hFile = CreateFileW(licenseFile.getFullPathName().toWideCharPointer(),
+                                   GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hFile != INVALID_HANDLE_VALUE) {
+            SYSTEMTIME st;
+            FILETIME ft;
+
+            // Convert currentDate to std::tm structure
+            std::istringstream iss(currentDate);
+            std::tm current_tm;
+            iss >> std::get_time(&current_tm, "%Y-%m-%d %H:%M:%S");
+
+            // Convert std::tm to time_t
+            std::time_t current_time_t = std::mktime(&current_tm);
+
+            // Convert time_t to UTC time
+            std::tm *utc_tm = std::gmtime(&current_time_t);
+
+            // Set SYSTEMTIME structure
+            st.wYear = utc_tm->tm_year + 1900;
+            st.wMonth = utc_tm->tm_mon + 1;
+            st.wDay = utc_tm->tm_mday;
+            st.wHour = utc_tm->tm_hour;
+            st.wMinute = utc_tm->tm_min;
+            st.wSecond = utc_tm->tm_sec;
+            st.wMilliseconds = 0;
+
+            // Convert SYSTEMTIME to FILETIME
+            SystemTimeToFileTime(&st, &ft);
+
+            // Set the file creation time
+            SetFileTime(hFile, &ft, NULL, NULL);
+            CloseHandle(hFile);
+        }
+
         return true;
     } else {
         std::ifstream inFile(licenseFile.getFullPathName().toStdString());
@@ -211,13 +251,38 @@ bool checkLicenseFile(const juce::File &licenseFile)
         std::tm creation_tm;
         iss >> std::get_time(&creation_tm, "%Y-%m-%d %H:%M:%S");
         auto creation_time = std::chrono::system_clock::from_time_t(std::mktime(&creation_tm));
-        auto duration = std::chrono::duration_cast<std::chrono::hours>(now - creation_time).count();
 
-        if (duration > 7 * 24) {
+        // Calculate the expiration duration in seconds
+        auto expiration_duration = std::chrono::seconds(nYear * 365 * 24 * 3600 +
+                                                        nMonth * 30 * 24 * 3600 +
+                                                        nDay * 24 * 3600 +
+                                                        nHour * 3600 + nMinute * 60 + nSecond);
+
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - creation_time);
+
+        if (duration > expiration_duration) {
             juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
                                                    "License Expired",
                                                    "Your license has expired.");
             return false;
+        }
+
+        // Calculate remaining time
+        auto remaining_time = expiration_duration - duration;
+        auto remaining_days = std::chrono::duration_cast<std::chrono::hours>(remaining_time).count() / 24;
+
+        // If remaining time is less than 7 days, show a warning message
+        if (remaining_days < 7) {
+            auto expiration_time = creation_time + expiration_duration;
+            std::time_t expiration_time_t = std::chrono::system_clock::to_time_t(expiration_time);
+            std::tm expiration_tm = *std::localtime(&expiration_time_t);
+            std::ostringstream oss;
+            oss << std::put_time(&expiration_tm, "%Y-%m-%d %H:%M:%S");
+            std::string expiration_str = oss.str();
+
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                                                   "License Warning",
+                                                   "Your license will expire on " + expiration_str);
         }
     }
     return true;
