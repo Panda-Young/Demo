@@ -74,6 +74,7 @@ public:
     std::string hostAppName;
     int hostAppVersion = -1;
     bool anyParamChanged = false;
+    bool saveTempData = false;
 
     void *algo_handle = nullptr;
     bool bypassEnable = false;
@@ -84,6 +85,7 @@ private:
     double originalSampleRate = 0; // default sample rate
     uint32_t ProcessBlockCounter = 0;
     bool isLicenseValid = false;
+    juce::File DataDumpDir, OriginDataDumpFile[2], DownSampleDataDumpFile[2], UpSampleDataDumpFile[2];
 
     const int block_size = 2048;
     uint32_t isFirstAlgoFrame = 0;

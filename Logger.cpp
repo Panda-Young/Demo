@@ -9,9 +9,9 @@
 #include "Logger.h"
 #include <ctime>
 #include <iomanip>
+#include <juce_core/juce_core.h>
 #include <sstream>
 #include <windows.h>
-#include <juce_core/juce_core.h>
 
 LogLevel globalLogLevel = LOG_INFO;
 juce::FileLogger *globalLogger = nullptr;
@@ -37,7 +37,8 @@ const char *getLogLevelString(LogLevel level)
     }
 }
 
-std::string getCurrentTimeString() {
+std::string getCurrentTimeString()
+{
     auto now = juce::Time::getCurrentTime();
     auto millis = now.toMilliseconds();
     auto seconds = millis / 1000;
@@ -58,7 +59,8 @@ std::string getCurrentTimeString() {
     return oss.str();
 }
 
-void logMsg(juce::FileLogger *logger, LogLevel level, const std::string &message, const char *file, const char *function, int line)
+void logMsg(juce::FileLogger *logger, LogLevel level, const std::string &message,
+            const char *file, const char *function, int line)
 {
     if (level < globalLogLevel) {
         return;

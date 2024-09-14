@@ -63,49 +63,43 @@ int getAuditionVersion()
     return -1;
 }
 
-void savePCMDatatoDesktop(const std::string &filename, const float *data, size_t numSamples)
+void saveFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples)
 {
-    juce::File desktopPath = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
-    juce::File PCMfullPath = desktopPath.getChildFile(filename);
-
-    std::ofstream outFile(PCMfullPath.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
+    std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + PCMfullPath.getFullPathName().toStdString() +
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
                                ". Reason: " + std::string(strerror(errno)));
         return;
     }
     outFile.write(reinterpret_cast<const char *>(data), numSamples * sizeof(float));
     outFile.close();
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + PCMfullPath.getFullPathName().toStdString() +
+        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + pcmFile.getFullPathName().toStdString() +
                                ". Reason: " + std::string(strerror(errno)));
     }
 }
 
-void convertPCMtoWAV(const std::string &filename,
-                     uint16_t Num_Channel, uint32_t SampleRate, uint16_t bits_per_sam, uint16_t audioFormat)
+void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
+                     uint16_t bits_per_sam, uint16_t audioFormat)
 {
-    juce::File desktopPath = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
-    juce::File PCMfullPath = desktopPath.getChildFile(filename);
-
-    std::ifstream pcmFile(PCMfullPath.getFullPathName().toStdString(), std::ios::binary | std::ios::in);
-    if (!pcmFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for reading: " + PCMfullPath.getFullPathName().toStdString() +
+    std::ifstream pcmFileStream(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::in);
+    if (!pcmFileStream) {
+        LOG_MSG(LOG_ERROR, "Failed to open file for reading: " + pcmFile.getFullPathName().toStdString() +
                                ". Reason: " + std::string(strerror(errno)));
         return;
     }
 
-    std::ofstream wavFile(PCMfullPath.getFullPathName().toStdString() + ".wav", std::ios::binary | std::ios::out);
+    std::ofstream wavFile(pcmFile.getFullPathName().toStdString() + ".wav", std::ios::binary | std::ios::out);
     if (!wavFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + PCMfullPath.getFullPathName().toStdString() +
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
                                ".wav. Reason: " + std::string(strerror(errno)));
         return;
     }
 
     // Calculate sizes
-    pcmFile.seekg(0, std::ios::end);
-    std::streamsize pcmSize = pcmFile.tellg();
-    pcmFile.seekg(0, std::ios::beg);
+    pcmFileStream.seekg(0, std::ios::end);
+    std::streamsize pcmSize = pcmFileStream.tellg();
+    pcmFileStream.seekg(0, std::ios::beg);
 
     uint32_t byteRate = SampleRate * Num_Channel * bits_per_sam / 8;
     uint16_t blockAlign = Num_Channel * bits_per_sam / 8;
@@ -132,17 +126,17 @@ void convertPCMtoWAV(const std::string &filename,
 
     // Write PCM data to WAV file
     std::vector<char> buffer(static_cast<size_t>(pcmSize));
-    if (pcmFile.read(buffer.data(), pcmSize)) {
+    if (pcmFileStream.read(buffer.data(), pcmSize)) {
         wavFile.write(buffer.data(), pcmSize);
     }
 
     // Close files
-    pcmFile.close();
+    pcmFileStream.close();
     wavFile.close();
 
     // Delete PCM file
-    if (!PCMfullPath.deleteFile()) {
-        LOG_MSG(LOG_ERROR, "Failed to delete PCM file: " + PCMfullPath.getFullPathName().toStdString());
+    if (!pcmFile.deleteFile()) {
+        LOG_MSG(LOG_ERROR, "Failed to delete PCM file: " + pcmFile.getFullPathName().toStdString());
     }
 }
 

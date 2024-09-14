@@ -49,6 +49,7 @@ void log_msg_c(LogLevel level, const char *message, const char *file, const char
 #ifdef __cplusplus
 }
 void set_log_level(LogLevel level);
-void logMsg(juce::FileLogger *logger, LogLevel level, const std::string &message, const char *file, const char *function, int line);
+void logMsg(juce::FileLogger *logger, LogLevel level, const std::string &message,
+            const char *file, const char *function, int line);
 #define LOG_MSG(level, message) logMsg(globalLogger, level, message, __FILE_NAME__, __FUNCTION_NAME__, __LINE__)
 #endif
