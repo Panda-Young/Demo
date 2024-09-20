@@ -82,6 +82,16 @@ void saveFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSa
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam, uint16_t audioFormat)
 {
+    if (!pcmFile.existsAsFile()) {
+        LOG_MSG(LOG_ERROR, "PCM file does not exist: " + pcmFile.getFullPathName().toStdString());
+        return;
+    }
+    if (pcmFile.getSize() == 0) {
+        if (!pcmFile.deleteFile()) {
+            LOG_MSG(LOG_ERROR, "Failed to delete empty PCM file: " + pcmFile.getFullPathName().toStdString());
+        }
+        return;
+    }
     std::ifstream pcmFileStream(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::in);
     if (!pcmFileStream) {
         LOG_MSG(LOG_ERROR, "Failed to open file for reading: " + pcmFile.getFullPathName().toStdString() +

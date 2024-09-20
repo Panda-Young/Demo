@@ -54,6 +54,7 @@ private:
     DemoAudioProcessor& audioProcessor;
     juce::TextButton VersionButton;
     juce::ComboBox logLevelComboBox;
+    juce::ToggleButton dataDumpButton;
     int DebugButtonClickedTimes = 0;
     CustomLookAndFeel customLookAndFeel;
 

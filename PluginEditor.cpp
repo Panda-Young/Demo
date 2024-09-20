@@ -64,6 +64,12 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     logLevelComboBox.setVisible(false);
     logLevelComboBox.addListener(this);
 
+    dataDumpButton.setButtonText("Data Dump");
+    dataDumpButton.setToggleState(audioProcessor.dataDumpEnable, juce::NotificationType::dontSendNotification);
+    dataDumpButton.addListener(this);
+    addAndMakeVisible(dataDumpButton);
+    dataDumpButton.setVisible(false);
+
     GainSlider.setSliderStyle(juce::Slider::Rotary);
     GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
     GainSlider.setRange(-20.0f, 20.0f, 0.1f);
@@ -87,6 +93,7 @@ DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
     VersionButton.removeListener(this);
     VersionButton.setLookAndFeel(nullptr);
     logLevelComboBox.removeListener(this);
+    dataDumpButton.removeListener(this);
 
     BypassButton.removeListener(this);
     GainSlider.removeListener(this);
@@ -110,6 +117,7 @@ void DemoAudioProcessorEditor::resized()
     BypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT);
     VersionButton.setBounds(0, BypassButton.getY() + BypassButton.getHeight() + MARGIN * 4, BUTTON_WIDTH, BUTTON_HEIGHT);
     logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, VersionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
+    dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, VersionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
 
     LOG_MSG(LOG_INFO, "UI resized");
 }
@@ -125,8 +133,18 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
         DebugButtonClickedTimes++;
         if (DebugButtonClickedTimes == 5) {
             logLevelComboBox.setVisible(true);
-            DebugButtonClickedTimes = 0;
+            dataDumpButton.setVisible(true);
+            DebugButtonClickedTimes = -5;
+        } else if (DebugButtonClickedTimes == 0) {
+            logLevelComboBox.setVisible(false);
+            dataDumpButton.setVisible(false);
         }
+    } else if (button == &dataDumpButton) {
+        audioProcessor.dataDumpEnable = dataDumpButton.getToggleState();
+        std::string msg = "Data dump is " + std::string(audioProcessor.dataDumpEnable ? "enabled" : "disabled");
+        LOG_MSG(LOG_INFO, msg);
+    } else {
+        LOG_MSG(LOG_WARN, "Unknown button clicked"); // Should never happen
     }
     audioProcessor.anyParamChanged = true;
 }
@@ -164,5 +182,6 @@ void DemoAudioProcessorEditor::updateParameterDisplays()
     GainSlider.setValue(audioProcessor.gain, juce::NotificationType::dontSendNotification);
     BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.bypassEnable ? ENABLE_COLOR : DISABLE_COLOR);
     logLevelComboBox.setSelectedId(globalLogLevel, juce::NotificationType::dontSendNotification);
+    dataDumpButton.setToggleState(audioProcessor.dataDumpEnable, juce::NotificationType::dontSendNotification);
     LOG_MSG(LOG_INFO, "Parameter displays updated from restored state");
 }

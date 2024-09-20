@@ -228,23 +228,24 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     setLatencySamples(block_size);
     ProcessBlockCounter = 0;
 
-    if (saveTempData) {
-        juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
-        DataDumpDir = UserDesktop.getChildFile(JucePlugin_Name + juce::String("_TempData"));
-        DataDumpDir.createDirectory();
+    juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
+    DataDumpDir = UserDesktop.getChildFile(JucePlugin_Name + juce::String("_DataDump"));
+    DataDumpDir.createDirectory();
 
-        auto now = std::chrono::system_clock::now();
-        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-        char timeStr[20] = {0};
-        std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H%M%S_", std::localtime(&now_time));
-        juce::String TimeStamp = juce::String(timeStr);
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    char timeStr[20] = {0};
+    std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H%M%S_", std::localtime(&now_time));
+    juce::String TimeStamp = juce::String(timeStr);
 
-        for (auto channel = 0; channel < 2; channel++) {
-            juce::String Suffix = juce::String(channel) + ".pcm";
-            OriginDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "original" + Suffix);
-            DownSampleDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "_downSampled_" + Suffix);
-            UpSampleDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "_upSampled_" + Suffix);
-        }
+    for (auto channel = 0; channel < 2; channel++) {
+        juce::String Suffix = juce::String(channel) + ".pcm";
+        OriginDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "original_" + Suffix);
+        OriginDataDumpFile[channel].create();
+        DownSampleDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "downSampled_" + Suffix);
+        DownSampleDataDumpFile[channel].create();
+        UpSampleDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "upSampled_" + Suffix);
+        UpSampleDataDumpFile[channel].create();
     }
 }
 
@@ -252,15 +253,21 @@ void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    ProcessBlockCounter = 0;
-
-    if (saveTempData) {
+    if (ProcessBlockCounter) {
         for (int channel = 0; channel < 2; channel++) {
             convertPCMtoWAV(OriginDataDumpFile[channel], 1, originalSampleRate, 32, 3);
             convertPCMtoWAV(DownSampleDataDumpFile[channel], 1, targetSampleRate, 32, 3);
             convertPCMtoWAV(UpSampleDataDumpFile[channel], 1, originalSampleRate, 32, 3);
         }
     }
+    if (DataDumpDir.isDirectory()) {
+        juce::Array<juce::File> files;
+        DataDumpDir.findChildFiles(files, juce::File::findFiles, false);
+        if (files.size() == 0) {
+            DataDumpDir.deleteRecursively();
+        }
+    }
+    ProcessBlockCounter = 0;
 
     LOG_MSG(LOG_INFO, "released Resources");
 }
@@ -301,9 +308,9 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     int numSamples = buffer.getNumSamples();
     if (ProcessBlockCounter++ == 0) {
-        LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples));
-        LOG_MSG(LOG_INFO, "totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
-                           ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels));
+        LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples) +
+                              ", totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
+                              ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels));
     }
 
     int buffer_index = 0;
@@ -328,7 +335,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             if (bypassEnable) {
                 // do nothing or copy the input buffer to the output buffer
             } else {
-                if (saveTempData) {
+                if (dataDumpEnable) {
                     for (int channel = 0; channel < totalNumInputChannels; channel++) {
                         saveFloatPCMData(OriginDataDumpFile[channel], write_buf[channel], block_size);
                     }
@@ -346,7 +353,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                     const float *upSampledpRptr = upSampledBuffer.getReadPointer(channel);
                     downSampler[channel].reset();
                     downSampler[channel].process(downSampledFactor, write_buf[channel], downSampledpWptr, downSampledNumSamples);
-                    if (saveTempData) {
+                    if (dataDumpEnable) {
                         saveFloatPCMData(DownSampleDataDumpFile[channel], downSampledpRptr, downSampledNumSamples);
                     }
                     int ret = algo_process(algo_handle, downSampledpRptr, downSampledpWptr, downSampledNumSamples);
@@ -355,7 +362,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                     }
                     upSampler[channel].reset();
                     upSampler[channel].process(upSampledFactor, downSampledpRptr, upSampledpWptr, block_size);
-                    if (saveTempData) {
+                    if (dataDumpEnable) {
                         saveFloatPCMData(UpSampleDataDumpFile[channel], upSampledpRptr, block_size);
                     }
                     for (int i = 0; i < block_size; i++) {
@@ -422,6 +429,7 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     tree.setProperty("bypassEnable", bypassEnable, nullptr);
     tree.setProperty("gain", gain, nullptr);
     tree.setProperty("globalLogLevel", globalLogLevel, nullptr);
+    tree.setProperty("dataDumpEnable", dataDumpEnable, nullptr);
     juce::MemoryOutputStream stream(destData, false);
     tree.writeToStream(stream);
 
@@ -444,6 +452,7 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
             }
             set_log_level(globalLogLevel);
         }
+        dataDumpEnable = tree.getProperty("dataDumpEnable", dataDumpEnable);
         if (algo_handle != nullptr) {
             int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
             if (ret != 0) {

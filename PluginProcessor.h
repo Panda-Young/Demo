@@ -74,7 +74,7 @@ public:
     std::string hostAppName;
     int hostAppVersion = -1;
     bool anyParamChanged = false;
-    bool saveTempData = false;
+    bool dataDumpEnable = false;
 
     void *algo_handle = nullptr;
     bool bypassEnable = false;
