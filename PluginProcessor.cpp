@@ -34,29 +34,29 @@ DemoAudioProcessor::DemoAudioProcessor()
     juce::File::SpecialLocationType LogDir = juce::File::SpecialLocationType::tempDirectory;
     juce::File logFile = juce::File::getSpecialLocation(LogDir).getChildFile("Demo_VST_Plugin.log");
     logger = std::make_unique<juce::FileLogger>(logFile, "");
-    logger->logMessage("DemoAudioProcessor()");
+    LOGI("DemoAudioProcessor()");
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
 {
-    logger->logMessage("~DemoAudioProcessor()");
+    LOGI("~DemoAudioProcessor()");
     logger = nullptr;
 }
 
 //==============================================================================
 const juce::String DemoAudioProcessor::getName() const
 {
-    logger->logMessage("getName(): " + juce::String(JucePlugin_Name));
+    LOGI("getName(): %s", JucePlugin_Name);
     return JucePlugin_Name;
 }
 
 bool DemoAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
-    logger->logMessage("acceptsMidi(): true");
+    LOGI("acceptsMidi(): true");
     return true;
    #else
-    logger->logMessage("acceptsMidi(): false");
+    LOGI("acceptsMidi(): false");
     return false;
    #endif
 }
@@ -64,10 +64,10 @@ bool DemoAudioProcessor::acceptsMidi() const
 bool DemoAudioProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
-    logger->logMessage("producesMidi(): true");
+    LOGD("producesMidi(): true");
     return true;
    #else
-    logger->logMessage("producesMidi(): false");
+    LOGD("producesMidi(): false");
     return false;
    #endif
 }
@@ -75,47 +75,47 @@ bool DemoAudioProcessor::producesMidi() const
 bool DemoAudioProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
-    logger->logMessage("isMidiEffect(): true");
+    LOGD("isMidiEffect(): true");
     return true;
    #else
-    logger->logMessage("isMidiEffect(): false");
+    LOGD("isMidiEffect(): false");
     return false;
    #endif
 }
 
 double DemoAudioProcessor::getTailLengthSeconds() const
 {
-    logger->logMessage("getTailLengthSeconds(): 0.0");
+    LOGI("getTailLengthSeconds(): 0.0");
     return 0.0;
 }
 
 int DemoAudioProcessor::getNumPrograms()
 {
-    logger->logMessage("getNumPrograms(): 1");
+    LOGI("getNumPrograms(): 1");
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
                 // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int DemoAudioProcessor::getCurrentProgram()
 {
-    logger->logMessage("getCurrentProgram(): 0");
+    LOGI("getCurrentProgram(): 0");
     return 0;
 }
 
 void DemoAudioProcessor::setCurrentProgram (int index)
 {
-    logger->logMessage("setCurrentProgram(): " + juce::String(index));
+    LOGI("setCurrentProgram(): %d", index);
 }
 
 const juce::String DemoAudioProcessor::getProgramName (int index)
 {
-    logger->logMessage("getProgramName(): " + juce::String(index));
+    LOGI("getProgramName(): %d", index);
     return {};
 }
 
 void DemoAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
-    logger->logMessage("changeProgramName(): " + juce::String(index) + ", " + newName);
+    LOGI("changeProgramName(): %d, %s", index, newName.toStdString().c_str());
 }
 
 //==============================================================================
@@ -123,15 +123,14 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    logger->logMessage("prepareToPlay(): " + juce::String("sampleRate: ") + juce::String(sampleRate) + ", " +
-                       juce::String("samplesPerBlock: ") + juce::String(samplesPerBlock));
+    LOGI("prepareToPlay(): sampleRate: %f, samplesPerBlock: %d", sampleRate, samplesPerBlock);
 }
 
 void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    logger->logMessage("releaseResources()");
+    LOGI("releaseResources()");
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -155,7 +154,7 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
         return false;
    #endif
 
-    logger->logMessage("isBusesLayoutSupported(): true");
+    LOGD("isBusesLayoutSupported(): true");
     return true;
   #endif
 }
@@ -163,10 +162,12 @@ bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
 
 void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    logger->logMessage("processBlock()");
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+    int numSamples = buffer.getNumSamples();
+    LOGD("processBlock(): totalNumInputChannels: %d, totalNumOutputChannels: %d, numSamples: %d",
+         totalNumInputChannels, totalNumOutputChannels, numSamples);
 
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
@@ -194,20 +195,20 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 //==============================================================================
 bool DemoAudioProcessor::hasEditor() const
 {
-    logger->logMessage("hasEditor(): true");
+    LOGI("hasEditor(): true");
     return true; // (change this to false if you choose to not supply an editor)
 }
 
 juce::AudioProcessorEditor* DemoAudioProcessor::createEditor()
 {
-    logger->logMessage("createEditor()");
+    LOGI("createEditor()");
     return new DemoAudioProcessorEditor (*this);
 }
 
 //==============================================================================
 void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    logger->logMessage("getStateInformation()");
+    LOGI("getStateInformation()");
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
@@ -215,7 +216,7 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 
 void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    logger->logMessage("setStateInformation()");
+    LOGI("setStateInformation()");
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
 }
