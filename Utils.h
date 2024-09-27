@@ -12,12 +12,21 @@
 #include <JuceHeader.h>
 #include <string>
 
+typedef enum RegType {
+    NoReg = 0,
+    UserReg = 1,
+    VIPReg
+} RegType_t;
+
 int getPluginType(const std::string &dllPath);
 std::string extractHostAppName();
 int getAuditionVersion();
-void saveFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples);
+void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples);
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam = 32, uint16_t audioFormat = 3);
 bool checkLicenseFile(const juce::File &licenseFile, uint32_t nYear = 0, uint32_t nMonth = 0, uint32_t nDay = 7, uint32_t nHour = 0, uint32_t nMinute = 0, uint32_t nSecond = 0);
+juce::String getSerial();
+RegType_t checkRegType();
+RegType_t regSoftware(juce::String strLicense);
 
 #endif // UTILS_H

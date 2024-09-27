@@ -45,12 +45,81 @@ DemoAudioProcessor::DemoAudioProcessor()
     globalLogger = logger.get();
     set_log_level(LOG_INFO);
 
-    juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
-    LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
-    pluginType = getPluginType(dllPath.getFullPathName().toStdString());
-    hostAppName = extractHostAppName();
-    hostAppVersion = getAuditionVersion();
+    RegType_t regType = checkRegType();
+    if (regType == NoReg) {
+        juce::DialogWindow::LaunchOptions options;
+        auto contactLabel = std::make_unique<juce::Label>("contactLabel", "Please contact Panda for license code.");
+        auto nativeCodeLabel = std::make_unique<juce::Label>("nativeCodeLabel", "Machine Code:");
+        auto NativeCodeEditor = std::make_unique<juce::TextEditor>("NativeCodeEditor");
+        auto LicenseCodeLabel = std::make_unique<juce::Label>("LicenseCodeLabel", "License Code:");
+        auto LicenseCodeEditor = std::make_unique<juce::TextEditor>("LicenseCodeEditor");
+        auto registerButton = std::make_unique<juce::TextButton>("Register", "Register");
+        auto cancelButton = std::make_unique<juce::TextButton>("Cancel", "Cancel");
 
+        juce::String natevaCode = getSerial();
+        NativeCodeEditor->setText(natevaCode, juce::dontSendNotification);
+        NativeCodeEditor->setReadOnly(true);
+
+        registerButton->onClick = [this, LicenseCodeEditor = LicenseCodeEditor.get()]() {
+            juce::String licenseCode = LicenseCodeEditor->getText();
+            RegType_t regType = regSoftware(licenseCode);
+            if (regType == NoReg) {
+                isLicenseValid == false;
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::AlertWindow::WarningIcon,
+                    "Registration Failed", "Invalid license code, please try again!");
+            } else {
+                isLicenseValid = true;
+                LOG_MSG_CF(LOG_INFO, "Registration Successful, Regtype: %d", regType);
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::AlertWindow::InfoIcon,
+                    "Registration Successful", "Your software has been successfully registered!");
+                juce::DialogWindow::getCurrentlyModalComponent()->exitModalState(0);
+            }
+        };
+
+        cancelButton->onClick = [this]() {
+            isLicenseValid = false;
+            LOG_MSG(LOG_WARN, "register canceled");
+            juce::DialogWindow::getCurrentlyModalComponent()->exitModalState(0);
+        };
+
+        auto contentComponent = std::make_unique<juce::Component>();
+        contentComponent->addAndMakeVisible(contactLabel.get());
+        contentComponent->addAndMakeVisible(nativeCodeLabel.get());
+        contentComponent->addAndMakeVisible(NativeCodeEditor.get());
+        contentComponent->addAndMakeVisible(LicenseCodeLabel.get());
+        contentComponent->addAndMakeVisible(LicenseCodeEditor.get());
+        contentComponent->addAndMakeVisible(registerButton.get());
+        contentComponent->addAndMakeVisible(cancelButton.get());
+
+        contactLabel->setBounds(50, 10, 200, 25);
+        nativeCodeLabel->setBounds(10, 40, 100, 25);
+        NativeCodeEditor->setBounds(120, 40, 250, 25);
+        LicenseCodeLabel->setBounds(10, 80, 100, 25);
+        LicenseCodeEditor->setBounds(120, 80, 250, 25);
+        registerButton->setBounds(10, 130, 100, 30);
+        cancelButton->setBounds(290, 130, 100, 30);
+
+        options.content.setOwned(contentComponent.release());
+        options.dialogTitle = "Registering the software";
+        options.dialogBackgroundColour = juce::Colours::grey;
+        options.escapeKeyTriggersCloseButton = true;
+        options.useNativeTitleBar = true;
+        options.resizable = false;
+
+        options.content->setSize(400, 200);
+        juce::DialogWindow::showModalDialog("Software Registration", options.content.release(),
+                                            nullptr, juce::Colours::grey, true);
+    } else {
+        isLicenseValid = true;
+        LOG_MSG_CF(LOG_INFO, "License check OK, regester type: %d", regType);
+    }
+    if (isLicenseValid == false) {
+        return;
+    }
+
+#if 0
     char licenseFileName[64] = JucePlugin_Name;
     strcat(licenseFileName, "_VST_Plugin.lic");
     juce::File licenseFile = tempDir.getChildFile(licenseFileName);
@@ -60,6 +129,13 @@ DemoAudioProcessor::DemoAudioProcessor()
     } else {
         isLicenseValid = true;
     }
+#endif
+
+    juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+    LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
+    pluginType = getPluginType(dllPath.getFullPathName().toStdString());
+    hostAppName = extractHostAppName();
+    hostAppVersion = getAuditionVersion();
 
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
@@ -337,7 +413,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             } else {
                 if (dataDumpEnable) {
                     for (int channel = 0; channel < totalNumInputChannels; channel++) {
-                        saveFloatPCMData(OriginDataDumpFile[channel], write_buf[channel], block_size);
+                        dumpFloatPCMData(OriginDataDumpFile[channel], write_buf[channel], block_size);
                     }
                 }
                 const float downSampledFactor = originalSampleRate / targetSampleRate;
@@ -354,7 +430,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                     downSampler[channel].reset();
                     downSampler[channel].process(downSampledFactor, write_buf[channel], downSampledpWptr, downSampledNumSamples);
                     if (dataDumpEnable) {
-                        saveFloatPCMData(DownSampleDataDumpFile[channel], downSampledpRptr, downSampledNumSamples);
+                        dumpFloatPCMData(DownSampleDataDumpFile[channel], downSampledpRptr, downSampledNumSamples);
                     }
                     int ret = algo_process(algo_handle, downSampledpRptr, downSampledpWptr, downSampledNumSamples);
                     if (ret != 0) {
@@ -363,7 +439,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                     upSampler[channel].reset();
                     upSampler[channel].process(upSampledFactor, downSampledpRptr, upSampledpWptr, block_size);
                     if (dataDumpEnable) {
-                        saveFloatPCMData(UpSampleDataDumpFile[channel], upSampledpRptr, block_size);
+                        dumpFloatPCMData(UpSampleDataDumpFile[channel], upSampledpRptr, block_size);
                     }
                     for (int i = 0; i < block_size; i++) {
                         write_buf[channel][i] = upSampledBuffer.getSample(channel, i);

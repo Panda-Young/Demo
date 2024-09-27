@@ -8,12 +8,15 @@
 
 #include "Utils.h"
 #include "Logger.h"
-#include <chrono>
-#include <ctime>
-#include <fstream>
-#include <iomanip>
-#include <regex>
-#include <sstream>
+#include <JucePluginDefines.h>                   // Include this header for JucePlugin_Name
+#include <chrono>                                // Include this header for std::chrono
+#include <ctime>                                 // Include this header for std::time_t, std::tm, std::localtime, std::mktime
+#include <fstream>                               // Include this header for std::ofstream, std::ifstream
+#include <intrin.h>                              // Include this header for __cpuid
+#include <iomanip>                               // Include this header for std::put_time
+#include <juce_cryptography/juce_cryptography.h> // Include this header for MD5
+#include <regex>                                 // Include this header for std::regex, std::smatch
+#include <sstream>                               // Include this header for std::ostringstream, std::istringstream
 #include <windows.h>
 
 int getPluginType(const std::string &dllPath)
@@ -63,7 +66,7 @@ int getAuditionVersion()
     return -1;
 }
 
-void saveFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples)
+void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples)
 {
     std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
     if (!outFile) {
@@ -290,4 +293,327 @@ bool checkLicenseFile(const juce::File &licenseFile,
         }
     }
     return true;
+}
+
+BOOL GetCpuByCmd(char *lpszCpu, int len = 128)
+{
+    const long MAX_COMMAND_SIZE = 10000;           // Command line output buffer size
+    char szFetCmd[] = "wmic cpu get processorid";  // Command line to get CPU serial number
+    const std::string strEnSearch = "ProcessorId"; // Leading information of the CPU serial number
+
+    BOOL bret = FALSE;
+    HANDLE hReadPipe = NULL;  // Read pipe
+    HANDLE hWritePipe = NULL; // Write pipe
+    PROCESS_INFORMATION pi;   // Process information
+    STARTUPINFO si;           // Control command line window information
+    SECURITY_ATTRIBUTES sa;   // Security attributes
+
+    char szBuffer[MAX_COMMAND_SIZE + 1] = {0}; // Output buffer for command line results
+    std::string strBuffer;
+    unsigned long count = 0;
+    long ipos = 0;
+
+    memset(&pi, 0, sizeof(pi));
+    memset(&si, 0, sizeof(si));
+    memset(&sa, 0, sizeof(sa));
+
+    pi.hProcess = NULL;
+    pi.hThread = NULL;
+    si.cb = sizeof(STARTUPINFO);
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.lpSecurityDescriptor = NULL;
+    sa.bInheritHandle = TRUE;
+
+    // 1.0 Create pipe
+    bret = CreatePipe(&hReadPipe, &hWritePipe, &sa, 0);
+    if (!bret) {
+        goto END;
+    }
+
+    // 2.0 Set the command line window information to the specified read and write pipes
+    GetStartupInfo(&si);
+    si.hStdError = hWritePipe;
+    si.hStdOutput = hWritePipe;
+    si.wShowWindow = SW_HIDE; // Hide the command line window
+    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+
+    // 3.0 Create a process to get the command line
+    bret = CreateProcess(NULL, szFetCmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+    if (!bret) {
+        goto END;
+    }
+
+    // 4.0 Read the returned data
+    WaitForSingleObject(pi.hProcess, 500 /*INFINITE*/);
+    bret = ReadFile(hReadPipe, szBuffer, MAX_COMMAND_SIZE, &count, 0);
+    if (!bret) {
+        goto END;
+    }
+
+    // 5.0 Find the CPU serial number
+    bret = FALSE;
+    strBuffer = szBuffer;
+    ipos = strBuffer.find(strEnSearch);
+
+    if (ipos < 0) // Not found
+    {
+        goto END;
+    } else {
+        strBuffer = strBuffer.substr(ipos + strEnSearch.length());
+    }
+
+    memset(szBuffer, 0x00, sizeof(szBuffer));
+    strcpy_s(szBuffer, strBuffer.c_str());
+
+    // Remove spaces, \r, \n
+    {
+        int j = 0;
+        for (int i = 0; i < strlen(szBuffer); i++) {
+            if (szBuffer[i] != ' ' && szBuffer[i] != '\n' && szBuffer[i] != '\r') {
+                lpszCpu[j] = szBuffer[i];
+                j++;
+            }
+        }
+        lpszCpu[j] = '\0'; // Ensure the string is null-terminated
+    }
+
+    bret = TRUE;
+
+END:
+    // Close all handles
+    CloseHandle(hWritePipe);
+    CloseHandle(hReadPipe);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    return bret;
+}
+
+juce::String getHardDriveSerialNumber()
+{
+    DWORD serialNumber = 0;
+    if (GetVolumeInformationW(L"C:\\", NULL, 0, &serialNumber, NULL, NULL, NULL, 0)) {
+        return juce::String::toHexString((int)serialNumber).toUpperCase();
+    }
+    return "Unknown";
+}
+
+juce::String getSerial()
+{
+    char cpuid[64] = {0};
+    if (!GetCpuByCmd(cpuid, 64)) {
+        LOG_MSG(LOG_ERROR, "Failed to get CPU ID.");
+    }
+    juce::String cpuId(cpuid);
+    juce::String diskId = getHardDriveSerialNumber();
+    juce::String serial = cpuId.substring(0, 2) + diskId.substring(0, 1) + "-" +
+                          cpuId.substring(2, 4) + diskId.substring(1, 2) + "-" +
+                          cpuId.substring(4, 6) + diskId.substring(2, 3) + "-" +
+                          cpuId.substring(6, 8) + diskId.substring(3, 4) + "-" +
+                          cpuId.substring(8, 10) + diskId.substring(4, 5) + "-" +
+                          cpuId.substring(10, 12) + diskId.substring(5, 6) + "-" +
+                          cpuId.substring(12, 14) + diskId.substring(6, 7) + "-" +
+                          cpuId.substring(14, 16) + diskId.substring(7, 8);
+    return serial;
+}
+
+juce::String getRegSequence(const juce::String strSerial, RegType_t type)
+{
+    juce::String byte_array = strSerial;
+    juce::String new_array;
+    switch (type) {
+    case UserReg:
+        new_array = byte_array.replaceSection(5, 0, "U");
+        break;
+    case VIPReg:
+        new_array = byte_array.replaceSection(5, 0, "P");
+        break;
+    default:
+        break;
+    }
+    juce::MD5 md5(new_array.toUTF8());
+    return md5.toHexString().toUpperCase();
+}
+
+juce::String hashStringFormat(const juce::String hashTemp, RegType_t type)
+{
+    juce::String rettemp = "";
+    if (type == UserReg) {
+        std::time_t t = std::time(nullptr);
+        std::tm *now = std::localtime(&t);
+        now->tm_mday += 7;
+        std::mktime(now); // Normalize the date
+        char dateStr[9] = {0};
+        std::strftime(dateStr, sizeof(dateStr), "%m%d%Y", now);
+        for (int i = 0; i < 8; i++) {
+            dateStr[i] += 17; // interger to Upper case character
+        }
+        juce::String dateString(dateStr);
+        rettemp += hashTemp.substring(0, 4) + dateString.substring(0, 1) + "-" +
+                   hashTemp.substring(4, 8) + dateString.substring(0, 1) + "-" +
+                   hashTemp.substring(8, 12) + dateString.substring(1, 2) + "-" +
+                   hashTemp.substring(12, 16) + dateString.substring(3, 4) + "-" +
+                   hashTemp.substring(16, 20) + dateString.substring(4, 5) + "-" +
+                   hashTemp.substring(20, 24) + dateString.substring(5, 6) + "-" +
+                   hashTemp.substring(24, 28) + dateString.substring(6, 7) + "-" +
+                   hashTemp.substring(28, 32) + dateString.substring(7, 8);
+    } else if (type == VIPReg) {
+        for (int i = 0; i < 7; i++) {
+            rettemp += hashTemp.substring(4 * i, (4 * i + 4)) + "-";
+        }
+        rettemp += hashTemp.substring(28, 32);
+    } else {
+        LOG_MSG(LOG_ERROR, "Unknown regType");
+    }
+    return rettemp;
+}
+
+juce::String reverseHashStringFormat(const juce::String& formattedHash, RegType_t type)
+{
+    juce::String originalHash = "";
+    if (type == UserReg) {
+        for (int i = 0; i < 8; ++i) {
+            originalHash += formattedHash.substring(6 * i, 6 * i + 4);
+        }
+    } else if (type == VIPReg) {
+        for (int i = 0; i < 7; i++) {
+            originalHash += formattedHash.substring(5 * i, (5 * i + 4));
+        }
+        originalHash += formattedHash.substring(35, 39);
+    } else {
+        LOG_MSG(LOG_ERROR, "Unknown regType");
+    }
+    return originalHash;
+}
+
+bool isLicenseValid(const juce::String &license)
+{
+    juce::String dateString;
+    dateString += license.substring(4, 6);   // MM
+    dateString += license.substring(12, 14); // DD
+    dateString += license.substring(20, 24); // YYYY
+
+    char dateStr[9] = {0};
+    for (int i = 0; i < 8; i++) {
+        dateStr[i] = dateString[i] - 17; // Upper case character to integer
+    }
+
+    std::tm licenseDate = {};
+    std::istringstream ss(dateStr);
+    ss >> std::get_time(&licenseDate, "%m%d%Y");
+
+    std::time_t t = std::time(nullptr);
+    std::tm *now = std::localtime(&t);
+
+    std::time_t licenseTime = std::mktime(&licenseDate);
+    std::time_t currentTime = std::mktime(now);
+
+    return difftime(licenseTime, currentTime) >= 0;
+}
+
+RegType_t checkRegType()
+{
+    juce::File licenseDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Panda");
+    char licenseFileName[64] = JucePlugin_Name;
+    strcat(licenseFileName, "_VST_Plugin.lic");
+    licenseFileName[strlen(licenseFileName)] = '\0';
+    juce::File file(licenseDir.getFullPathName() + "\\" + licenseFileName);
+    juce::File currentExecutable = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+    juce::File tempLicense(currentExecutable.getParentDirectory().getChildFile(licenseFileName));
+
+    if (file.exists()) {
+        juce::FileInputStream input(file);
+        if (input.openedOk()) {
+            juce::String strLicense = input.readNextLine().trim();
+            juce::String StrSerial = getSerial();
+            if (strLicense.length() == 39) {
+                if (strLicense == hashStringFormat(getRegSequence(StrSerial, VIPReg), VIPReg)) {
+                    LOG_MSG(LOG_INFO, "VIP license is valid.");
+                    return VIPReg;
+                } else {
+                    LOG_MSG(LOG_ERROR, "VIP License is invalid.");
+                    return NoReg;
+                }
+            } else if (strLicense.length() == 47) {
+                if (reverseHashStringFormat(strLicense, UserReg) == getRegSequence(StrSerial, UserReg)) {
+                    if (isLicenseValid(strLicense)) {
+                        LOG_MSG(LOG_INFO, "User license is valid.");
+                        return UserReg;
+                    } else {
+                        LOG_MSG(LOG_INFO, "User license is invalid.");
+                        return NoReg;
+                    }
+                } else {
+                    LOG_MSG(LOG_ERROR, "User license is invalid.");
+                    return NoReg;
+                }
+            } else {
+                LOG_MSG(LOG_ERROR, "license is invalid.");
+                return NoReg;
+            }
+        } else {
+            LOG_MSG(LOG_ERROR, "Failed to open license file.");
+            return NoReg;
+        }
+    } else if (tempLicense.exists()) {
+        LOG_MSG(LOG_INFO, "Temp license file exists.");
+        juce::FileInputStream input(tempLicense);
+        if (input.openedOk()) {
+            juce::String strLicense = input.readNextLine().trim();
+            if (isLicenseValid(strLicense)) {
+                LOG_MSG(LOG_INFO, "Temp license is valid.");
+                return UserReg;
+            } else {
+                LOG_MSG(LOG_INFO, "Temp license is invalid.");
+                return NoReg;
+            }
+        } else {
+            LOG_MSG(LOG_ERROR, "Failed to open temp license file.");
+            return NoReg;
+        }
+    } else {
+        LOG_MSG(LOG_INFO, "License file does not exist.");
+        return NoReg;
+    }
+}
+
+RegType_t regSoftware(juce::String strLicense)
+{
+    juce::String StrSerial = getSerial();
+    juce::File licenseDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Panda");
+    if (!licenseDir.isDirectory()) {
+        licenseDir.createDirectory();
+    }
+    char licenseFileName[64] = JucePlugin_Name;
+    strcat(licenseFileName, "_VST_Plugin.lic");
+    juce::String filePath = licenseDir.getFullPathName() + "/" + licenseFileName;
+    if (strLicense.length() == 39) {
+        if (strLicense == hashStringFormat(getRegSequence(StrSerial, VIPReg), VIPReg)) {
+            juce::File file(filePath);
+            juce::FileOutputStream out(file);
+            out.setPosition(0);
+            out.write(strLicense.getCharPointer(), strLicense.length());
+            out.flush();
+            return VIPReg;
+        } else {
+            return NoReg;
+        }
+    } else if (strLicense.length() == 47) {
+        if (reverseHashStringFormat(strLicense, UserReg) == getRegSequence(StrSerial, UserReg)) {
+            if (isLicenseValid(strLicense)) {
+                juce::File file(filePath);
+                juce::FileOutputStream out(file);
+                out.setPosition(0);
+                out.write(strLicense.getCharPointer(), strLicense.length());
+                out.flush();
+                return UserReg;
+            } else {
+                return NoReg;
+            }
+        } else {
+            return NoReg;
+        }
+    } else {
+        return NoReg;
+    }
 }

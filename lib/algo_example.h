@@ -1,10 +1,10 @@
-/* **************************************************************
- * @Description: header for algorithm example
- * @Date: 2024-05-16 17:24:47
- * @Version: 0.1.0
- * @Author: pandapan@aactechnologies.com
- * @Copyright (c) 2024 by @AAC Technologies, All Rights Reserved. 
- **************************************************************/
+/***************************************************************************
+ * Description: algorithm exxample
+ * version: 0.1.0
+ * Author: Panda-Young
+ * Date: 2024-05-11 11:08:17
+ * Copyright (c) 2024 by Panda-Young, All Rights Reserved.
+ **************************************************************************/
 
 #ifndef _ALGO_EXAMPLE_H
 #define _ALGO_EXAMPLE_H
