@@ -18,13 +18,16 @@ typedef enum RegType {
     VIPReg
 } RegType_t;
 
-int getPluginType(const std::string &dllPath);
+int getPluginType();
 std::string extractHostAppName();
 int getAuditionVersion();
 void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples);
+void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft,
+                      const float *dataRight, size_t numSamples);
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam = 32, uint16_t audioFormat = 3);
-bool checkLicenseFile(const juce::File &licenseFile, uint32_t nYear = 0, uint32_t nMonth = 0, uint32_t nDay = 7, uint32_t nHour = 0, uint32_t nMinute = 0, uint32_t nSecond = 0);
+bool checkLicenseFile(const juce::File &licenseFile, uint32_t nYear = 0, uint32_t nMonth = 0, uint32_t nDay = 7,
+                      uint32_t nHour = 0, uint32_t nMinute = 0, uint32_t nSecond = 0);
 juce::String getSerial();
 RegType_t checkRegType();
 RegType_t regSoftware(juce::String strLicense);

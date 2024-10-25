@@ -19,11 +19,13 @@
 #include <sstream>                               // Include this header for std::ostringstream, std::istringstream
 #include <windows.h>
 
-int getPluginType(const std::string &dllPath)
+int getPluginType()
 {
-    auto pos = dllPath.rfind('.');
+    juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+    LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
+    auto pos = dllPath.getFullPathName().toStdString().rfind('.');
     if (pos != std::string::npos) {
-        auto extension = dllPath.substr(pos);
+        auto extension = dllPath.getFullPathName().toStdString().substr(pos);
         if (extension == ".dll") {
             return 2;
         } else if (extension == ".vst3") {
@@ -82,6 +84,25 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSa
     }
 }
 
+void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft, const float *dataRight, size_t numSamples)
+{
+    std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
+    if (!outFile) {
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
+                               ". Reason: " + std::string(strerror(errno)));
+        return;
+    }
+    for (size_t i = 0; i < numSamples; ++i) {
+        outFile.write(reinterpret_cast<const char *>(&dataLeft[i]), sizeof(float));
+        outFile.write(reinterpret_cast<const char *>(&dataRight[i]), sizeof(float));
+    }
+    outFile.close();
+    if (!outFile) {
+        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + pcmFile.getFullPathName().toStdString() +
+                               ". Reason: " + std::string(strerror(errno)));
+    }
+}
+
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam, uint16_t audioFormat)
 {
@@ -102,7 +123,9 @@ void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t S
         return;
     }
 
-    std::ofstream wavFile(pcmFile.getFullPathName().toStdString() + ".wav", std::ios::binary | std::ios::out);
+    std::string newFilePath = pcmFile.getFullPathName().toStdString();
+    newFilePath.replace(newFilePath.find(".pcm"), 4, ".wav");
+    std::ofstream wavFile(newFilePath, std::ios::binary | std::ios::out);
     if (!wavFile) {
         LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
                                ".wav. Reason: " + std::string(strerror(errno)));
@@ -468,7 +491,7 @@ juce::String hashStringFormat(const juce::String hashTemp, RegType_t type)
     return rettemp;
 }
 
-juce::String reverseHashStringFormat(const juce::String& formattedHash, RegType_t type)
+juce::String reverseHashStringFormat(const juce::String &formattedHash, RegType_t type)
 {
     juce::String originalHash = "";
     if (type == UserReg) {

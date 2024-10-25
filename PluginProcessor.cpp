@@ -131,9 +131,7 @@ DemoAudioProcessor::DemoAudioProcessor()
     }
 #endif
 
-    juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
-    LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
-    pluginType = getPluginType(dllPath.getFullPathName().toStdString());
+    pluginType = getPluginType();
     hostAppName = extractHostAppName();
     hostAppVersion = getAuditionVersion();
 

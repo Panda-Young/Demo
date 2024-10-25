@@ -69,26 +69,37 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    int getPluginType() const { return pluginType; };
+    std::string getHostAppName() const { return hostAppName; };
+    int getHostAppVersion() const { return hostAppVersion; };
+    void setBypassState(bool state) { bypassEnable = state; };
+    bool getBypassState() const { return bypassEnable; };
+    void setAnyParamChanged(bool state) { anyParamChanged = state; };
+    bool getAnyParamChanged() const { return anyParamChanged; };
+    void setDataDumpEnable(bool state) { dataDumpEnable = state; };
+    bool getDataDumpEnable() const { return dataDumpEnable; };
+    void setGainValue(float value) { gain = value; };
+    float getGainValue() const { return gain; };
+    void* getAlgoHandle() const { return algo_handle; };
+
+private:
+    //==============================================================================
     std::unique_ptr<juce::FileLogger> logger;
     int pluginType = -1;
     std::string hostAppName;
     int hostAppVersion = -1;
+    bool bypassEnable = false;
     bool anyParamChanged = false;
     bool dataDumpEnable = false;
-
-    void *algo_handle = nullptr;
-    bool bypassEnable = false;
-    float gain = 0.0f;
-
-private:
-    //==============================================================================
-    double originalSampleRate = 0; // default sample rate
-    uint32_t ProcessBlockCounter = 0;
     bool isLicenseValid = false;
-    juce::File DataDumpDir, OriginDataDumpFile[2], DownSampleDataDumpFile[2], UpSampleDataDumpFile[2];
+
+    uint32_t ProcessBlockCounter = 0;
+    uint32_t AlgoFrameCounter = 0;
 
     const int block_size = 2048;
-    uint32_t isFirstAlgoFrame = 0;
+    void *algo_handle = nullptr;
+    float gain = 0.0f;
 
     float *write_buf[2] = {0};
     float *read_buf[2] = {0};
@@ -96,7 +107,9 @@ private:
     int read_index = 0;
     float *InputBuffer = nullptr;
     float *OutputBuffer = nullptr;
+    juce::File DataDumpDir, OriginDataDumpFile[2], DownSampleDataDumpFile[2], UpSampleDataDumpFile[2];
 
+    double originalSampleRate = 0; // default sample rate
     double targetSampleRate = 16000.0f;
     juce::WindowedSincInterpolator downSampler[2];
     juce::WindowedSincInterpolator upSampler[2];
