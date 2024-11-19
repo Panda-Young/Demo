@@ -94,8 +94,8 @@ private:
     bool dataDumpEnable = false;
     bool isLicenseValid = false;
 
-    uint32_t ProcessBlockCounter = 0;
-    uint32_t AlgoFrameCounter = 0;
+    uint64_t ProcessBlockCounter = 0;
+    uint64_t AlgoFrameCounter = 0;
 
     const int block_size = 2048;
     void *algo_handle = nullptr;

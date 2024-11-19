@@ -103,6 +103,22 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft, const fl
     }
 }
 
+void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float>& buffer)
+{
+    std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
+    if (!outFile) {
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
+                               ". Reason: " + std::string(strerror(errno)));
+        return;
+    }
+
+    for (int i = 0; i < buffer.getNumSamples(); ++i) {
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            outFile.write(reinterpret_cast<const char *>(&buffer.getReadPointer(channel)[i]), sizeof(float));
+        }
+    }
+}
+
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam, uint16_t audioFormat)
 {

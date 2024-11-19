@@ -18,7 +18,7 @@
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
 
-#define MIN(a, b) (a) < (b) ? (a) : (b)
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 extern juce::FileLogger *globalLogger;
 
 //==============================================================================
@@ -384,7 +384,8 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     if (ProcessBlockCounter++ == 0) {
         LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples) +
                               ", totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
-                              ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels));
+                              ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels) +
+                              ", about " + std::to_string(numSamples * 1000.0f / originalSampleRate) + " milliseconds");
     }
 
     int buffer_index = 0;
@@ -539,6 +540,13 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 
     // in VST2 plugin, the editor is not created when setStateInformation is called
     if (auto *editor = dynamic_cast<DemoAudioProcessorEditor *>(getActiveEditor())) {
+        // Ensure the current thread has the MessageManager lock
+        const juce::MessageManagerLock mmLock;
+        // Check if the lock was successfully acquired
+        if (!mmLock.lockWasGained()) {
+            LOG_MSG(LOG_ERROR, "Failed to lock MessageManager");
+            return;
+        }
         editor->updateParameterDisplays();
     }
 }

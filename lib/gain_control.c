@@ -20,7 +20,8 @@ float dBChangeToFactor(float dBChange)
     if (isnan(dBChange) || isinf(dBChange)) {
         LOG_MSG_CF(LOG_ERROR, "Invalid dBChange value: %f, returning default value: 1.0", dBChange);
         // If dBChange is NaN or infinite, return an error value or a default value
-        return 1.0f; // Alternatively, one could choose to return MIN_GAIN_FACTOR or MAX_GAIN_FACTOR, depending on the requirement
+        // Alternatively, one could choose to return MIN_GAIN_FACTOR or MAX_GAIN_FACTOR, depending on the requirement
+        return 1.0f;
     }
 
     // Calculate the gain factor

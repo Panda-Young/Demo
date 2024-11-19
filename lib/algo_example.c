@@ -73,7 +73,8 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     switch (cmd) {
     case ALGO_PARAM1: {
         if (param_size != sizeof(char)) {
-            LOG_MSG_CF(LOG_ERROR, "Received param size %d Bytes is not correct. Expected size is %zu", param_size, sizeof(char));
+            LOG_MSG_CF(LOG_ERROR, "Received param size %d Bytes is not correct. Expected size is %zu",
+                       param_size, sizeof(char));
             return E_PARAM_SIZE_INVALID;
         }
         algo_handle_ptr->param1 = *(char *)param;
@@ -82,7 +83,8 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     }
     case ALGO_PARAM2: {
         if (param_size != sizeof(float)) {
-            LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is not correct. Expected size is %zu", param_size, sizeof(float));
+            LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is not correct. Expected size is %zu",
+                       param_size, sizeof(float));
             return E_PARAM_SIZE_INVALID;
         }
         algo_handle_ptr->param2 = *(float *)param;
@@ -91,7 +93,8 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     }
     case ALGO_PARAM3: {
         if (param_size > MAX_BUF_SIZE) {
-            LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is too large. Max size is %u", param_size, MAX_BUF_SIZE);
+            LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is too large. Max size is %u",
+                       param_size, MAX_BUF_SIZE);
             return E_PARAM_SIZE_INVALID;
         }
         memset(algo_handle_ptr->param3, 0, MAX_BUF_SIZE);
@@ -101,7 +104,8 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     }
     case ALGO_PARAM4: {
         if (param_size > MAX_BUF_SIZE) {
-            LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is too large. Max size is %u", param_size, MAX_BUF_SIZE);
+            LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is too large. Max size is %u",
+                       param_size, MAX_BUF_SIZE);
             return E_PARAM_SIZE_INVALID;
         }
         algo_handle_ptr->param4 = (float *)malloc(param_size);
