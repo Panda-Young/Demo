@@ -131,10 +131,6 @@ DemoAudioProcessor::DemoAudioProcessor()
     }
 #endif
 
-    pluginType = getPluginType();
-    hostAppName = extractHostAppName();
-    hostAppVersion = getAuditionVersion();
-
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
         if (write_buf[i] == nullptr) {

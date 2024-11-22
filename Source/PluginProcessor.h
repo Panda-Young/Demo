@@ -70,9 +70,6 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     //==============================================================================
-    int getPluginType() const { return pluginType; };
-    std::string getHostAppName() const { return hostAppName; };
-    int getHostAppVersion() const { return hostAppVersion; };
     void setBypassState(bool state) { bypassEnable = state; };
     bool getBypassState() const { return bypassEnable; };
     void setAnyParamChanged(bool state) { anyParamChanged = state; };
@@ -86,9 +83,6 @@ public:
 private:
     //==============================================================================
     std::unique_ptr<juce::FileLogger> logger;
-    int pluginType = -1;
-    std::string hostAppName;
-    int hostAppVersion = -1;
     bool bypassEnable = false;
     bool anyParamChanged = false;
     bool dataDumpEnable = false;

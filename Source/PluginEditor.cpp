@@ -78,9 +78,9 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     addAndMakeVisible(GainSlider);
 
     setSize(UI_WIDTH, UI_HEIGHT);
-    if (audioProcessor.getPluginType() == 3 &&
-        audioProcessor.getHostAppName() == "Adobe Audition" &&
-        audioProcessor.getHostAppVersion() >= 0 && audioProcessor.getHostAppVersion() <= 2020) {
+    if (getPluginType() == 3 &&
+        extractHostAppName() == "Adobe Audition" &&
+        getAuditionVersion() >= 0 && getAuditionVersion() <= 2020) {
         float scaleFactor = GetDpiForSystem() / 96.0f; // DPI scaling for Windows
         setSize(UI_WIDTH * scaleFactor, UI_HEIGHT * scaleFactor);
     }

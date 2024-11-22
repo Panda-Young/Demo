@@ -25,19 +25,25 @@ if not "%~1"=="" (
 set copy_vst2=1
 set copy_vst3=1
 
-set VS_version=VisualStudio2022
+set VS_version=VisualStudio2017
 
 set build_type=Debug
-@REM set build_type=Release
+
+if "%build_type%" NEQ "Debug" (
+    set build_type=Release
+)
+
+set APP_INSTALL_DIR=D:\Program Files
 
 set host_program_name="Adobe Audition.exe"
-set host_program_path="C:\Program Files\Adobe\Adobe Audition 2020\Adobe Audition.exe"
+set host_program_path="%APP_INSTALL_DIR%\Adobe\Adobe Audition 2020\Adobe Audition.exe"
 @REM set host_program_name="Audacity.exe"
-@REM set host_program_path="C:\Program Files\Audacity\Audacity.exe"
+@REM set host_program_path="%APP_INSTALL_DIR%\Audacity\Audacity.exe"
 @REM set host_program_name="reaper.exe"
-@REM set host_program_path="C:\Program Files\REAPER (x64)\reaper.exe"
+@REM set host_program_path="%APP_INSTALL_DIR%\REAPER (x64)\reaper.exe"
 @REM set host_program_name="mulch2.exe"
-@REM set host_program_path="C:\Program Files\AudioMulch 2.2.4\mulch2.exe"
+@REM set host_program_root=%APP_INSTALL_DIR%\AudioMulch 2.2.4
+@REM set host_program_path="%host_program_root%\%host_program_name%"
 
 
 @REM Kill the program
@@ -58,7 +64,7 @@ if %host_program_name%=="Adobe Audition.exe" (
     set VST2_plugin_target_path="C:\Program Files\Common Files\VST2\%plugin_name%.dll"
     set architecture=x64
 ) else if %host_program_name%=="mulch2.exe" (
-    set VST2_plugin_target_path="C:\Program Files\AudioMulch 2.2.4\VSTPlugins\%plugin_name%.dll"
+    set VST2_plugin_target_path="%host_program_root%\VSTPlugins\%plugin_name%.dll"
     set architecture=Win32
     set copy_vst3=0
 )

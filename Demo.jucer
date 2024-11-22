@@ -2,8 +2,7 @@
 
 <JUCERPROJECT id="ndQYFm" name="Demo" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginFormats="buildVST,buildVST3"
-              pluginManufacturer="Panda" companyWebsite="pandayoung.top" version="1.4.0"
-              projectLineFeed="&#13;&#10;">
+              pluginManufacturer="Panda" version="1.4.0" projectLineFeed="&#13;&#10;">
   <MAINGROUP id="A3A7Ql" name="Demo">
     <GROUP id="{553DCF37-AEB0-4548-5A47-D63C9DB6E300}" name="Source">
       <GROUP id="{D6925CB4-DB15-FA06-2BD8-4BA086BD493E}" name="lib">
