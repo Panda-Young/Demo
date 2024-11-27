@@ -16,12 +16,12 @@
 
 #pragma once
 
-#include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include <JuceHeader.h>
 
 //==============================================================================
 /**
-*/
+ */
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
@@ -32,33 +32,32 @@ public:
     }
 };
 
-class DemoAudioProcessorEditor : public juce::AudioProcessorEditor, public juce::Button::Listener,
-                                public juce::Slider::Listener, public juce::ComboBox::Listener
+class DemoAudioProcessorEditor : public juce::AudioProcessorEditor, public juce::Button::Listener, public juce::Slider::Listener, public juce::ComboBox::Listener
 {
 public:
-    DemoAudioProcessorEditor (DemoAudioProcessor&);
+    DemoAudioProcessorEditor(DemoAudioProcessor &);
     ~DemoAudioProcessorEditor() override;
 
     //==============================================================================
-    void paint (juce::Graphics&) override;
+    void paint(juce::Graphics &) override;
     void resized() override;
 
-    void buttonClicked(juce::Button* button) override;
-    void comboBoxChanged(juce::ComboBox* comboBox) override;
+    void buttonClicked(juce::Button *button) override;
+    void comboBoxChanged(juce::ComboBox *comboBox) override;
     void updateParameterDisplays();
-    void sliderValueChanged(juce::Slider* slider) override;
+    void sliderValueChanged(juce::Slider *slider) override;
 
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
-    DemoAudioProcessor& audioProcessor;
-    juce::TextButton VersionButton;
+    DemoAudioProcessor &audioProcessor;
+    juce::TextButton versionButton;
     juce::ComboBox logLevelComboBox;
     juce::ToggleButton dataDumpButton;
-    int DebugButtonClickedTimes = 0;
+    int versionButtonClickedTimes = 0;
     CustomLookAndFeel customLookAndFeel;
 
-    juce::TextButton BypassButton;
-    juce::Slider GainSlider;
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoAudioProcessorEditor)
+    juce::TextButton bypassButton;
+    juce::Slider gainSlider;
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessorEditor)
 };

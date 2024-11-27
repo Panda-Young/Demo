@@ -14,8 +14,8 @@
   ==============================================================================
 */
 
-#include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "PluginProcessor.h"
 #include <JucePluginDefines.h>
 #include <Windows.h>
 
@@ -37,21 +37,21 @@
 #define DISABLE_COLOR juce::Colours::lightslategrey
 
 //==============================================================================
-DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
+    : AudioProcessorEditor(&p), audioProcessor(p)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    VersionButton.setButtonText(JucePlugin_VersionString);
-    VersionButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
-    VersionButton.addListener(this);
-    addAndMakeVisible(VersionButton);
-    VersionButton.setLookAndFeel(&customLookAndFeel);
+    versionButton.setButtonText(JucePlugin_VersionString);
+    versionButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
+    versionButton.addListener(this);
+    addAndMakeVisible(versionButton);
+    versionButton.setLookAndFeel(&customLookAndFeel);
 
-    BypassButton.setButtonText("Bypass");
-    BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
-    BypassButton.addListener(this);
-    addAndMakeVisible(BypassButton);
+    bypassButton.setButtonText("Bypass");
+    bypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
+    bypassButton.addListener(this);
+    addAndMakeVisible(bypassButton);
 
     // Initialize ComboBox but don't make it visible yet
     logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
@@ -70,12 +70,12 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
     addAndMakeVisible(dataDumpButton);
     dataDumpButton.setVisible(false);
 
-    GainSlider.setSliderStyle(juce::Slider::Rotary);
-    GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
-    GainSlider.setRange(-20.0f, 20.0f, 0.1f);
-    GainSlider.setValue(audioProcessor.getGainValue());
-    GainSlider.addListener(this);
-    addAndMakeVisible(GainSlider);
+    gainSlider.setSliderStyle(juce::Slider::Rotary);
+    gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
+    gainSlider.setRange(-20.0f, 20.0f, 0.1f);
+    gainSlider.setValue(audioProcessor.getGainValue());
+    gainSlider.addListener(this);
+    addAndMakeVisible(gainSlider);
 
     setSize(UI_WIDTH, UI_HEIGHT);
     if (getPluginType() == 3 &&
@@ -90,21 +90,21 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor (DemoAudioProcessor& p)
 
 DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
 {
-    VersionButton.removeListener(this);
-    VersionButton.setLookAndFeel(nullptr);
+    versionButton.removeListener(this);
+    versionButton.setLookAndFeel(nullptr);
     logLevelComboBox.removeListener(this);
     dataDumpButton.removeListener(this);
 
-    BypassButton.removeListener(this);
-    GainSlider.removeListener(this);
+    bypassButton.removeListener(this);
+    gainSlider.removeListener(this);
     LOG_MSG(LOG_INFO, "UI destroyed");
 }
 
 //==============================================================================
-void DemoAudioProcessorEditor::paint (juce::Graphics& g)
+void DemoAudioProcessorEditor::paint(juce::Graphics &g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
     LOG_MSG(LOG_DEBUG, "UI painted");
 }
 
@@ -113,29 +113,29 @@ void DemoAudioProcessorEditor::resized()
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     auto bounds = getLocalBounds().reduced(MARGIN);
-    GainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, UI_HEIGHT / 2 - SLIDER_HEIGHT, SLIDER_WIDTH, SLIDER_HEIGHT);
-    BypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT);
-    VersionButton.setBounds(0, BypassButton.getY() + BypassButton.getHeight() + MARGIN * 4, BUTTON_WIDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, VersionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
-    dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, VersionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
+    gainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, UI_HEIGHT / 2 - SLIDER_HEIGHT, SLIDER_WIDTH, SLIDER_HEIGHT);
+    bypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT);
+    versionButton.setBounds(0, bypassButton.getY() + bypassButton.getHeight() + MARGIN * 4, BUTTON_WIDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, versionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
+    dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, versionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
 
     LOG_MSG(LOG_INFO, "UI resized");
 }
 
-void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
+void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
 {
-    if (button == &BypassButton) {
+    if (button == &bypassButton) {
         audioProcessor.setBypassState(!audioProcessor.getBypassState());
-        BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
+        bypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
         std::string msg = "Bypass is " + std::string(audioProcessor.getBypassState() ? "enabled" : "disabled");
         LOG_MSG(LOG_INFO, msg);
-    } else if (button == &VersionButton) {
-        DebugButtonClickedTimes++;
-        if (DebugButtonClickedTimes == 5) {
+    } else if (button == &versionButton) {
+        versionButtonClickedTimes++;
+        if (versionButtonClickedTimes == 5) {
             logLevelComboBox.setVisible(true);
             dataDumpButton.setVisible(true);
-            DebugButtonClickedTimes = -5;
-        } else if (DebugButtonClickedTimes == 0) {
+            versionButtonClickedTimes = -5;
+        } else if (versionButtonClickedTimes == 0) {
             logLevelComboBox.setVisible(false);
             dataDumpButton.setVisible(false);
         }
@@ -149,10 +149,10 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button* button)
     audioProcessor.setAnyParamChanged(true);
 }
 
-void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
+void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
 {
-    if (slider == &GainSlider) {
-        audioProcessor.setGainValue(GainSlider.getValue());
+    if (slider == &gainSlider) {
+        audioProcessor.setGainValue(gainSlider.getValue());
         float gainValue = audioProcessor.getGainValue();
         int ret = algo_set_param(audioProcessor.getAlgoHandle(), ALGO_PARAM2, &gainValue, sizeof(float));
         if (ret != E_OK) {
@@ -164,7 +164,7 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
     audioProcessor.setAnyParamChanged(true);
 }
 
-void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
+void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
 {
     if (comboBox == &logLevelComboBox) {
         if (logLevelComboBox.getSelectedId() != globalLogLevel) {
@@ -180,8 +180,8 @@ void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
 
 void DemoAudioProcessorEditor::updateParameterDisplays()
 {
-    GainSlider.setValue(audioProcessor.getGainValue(), juce::NotificationType::dontSendNotification);
-    BypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
+    gainSlider.setValue(audioProcessor.getGainValue(), juce::NotificationType::dontSendNotification);
+    bypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
     logLevelComboBox.setSelectedId(globalLogLevel, juce::NotificationType::dontSendNotification);
     dataDumpButton.setToggleState(audioProcessor.getDataDumpEnable(), juce::NotificationType::dontSendNotification);
     LOG_MSG(LOG_INFO, "Parameter displays updated from restored state");

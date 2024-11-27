@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include <JuceHeader.h>
 #include "Logger.h"
 #include "Utils.h"
+#include <JuceHeader.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,8 +28,8 @@ extern "C" {
 
 //==============================================================================
 /**
-*/
-class DemoAudioProcessor  : public juce::AudioProcessor
+ */
+class DemoAudioProcessor : public juce::AudioProcessor
 {
 public:
     //==============================================================================
@@ -37,17 +37,17 @@ public:
     ~DemoAudioProcessor() override;
 
     //==============================================================================
-    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
-   #ifndef JucePlugin_PreferredChannelConfigurations
-    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-   #endif
+#ifndef JucePlugin_PreferredChannelConfigurations
+    bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
+#endif
 
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
 
     //==============================================================================
-    juce::AudioProcessorEditor* createEditor() override;
+    juce::AudioProcessorEditor *createEditor() override;
     bool hasEditor() const override;
 
     //==============================================================================
@@ -61,13 +61,13 @@ public:
     //==============================================================================
     int getNumPrograms() override;
     int getCurrentProgram() override;
-    void setCurrentProgram (int index) override;
-    const juce::String getProgramName (int index) override;
-    void changeProgramName (int index, const juce::String& newName) override;
+    void setCurrentProgram(int index) override;
+    const juce::String getProgramName(int index) override;
+    void changeProgramName(int index, const juce::String &newName) override;
 
     //==============================================================================
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    void getStateInformation(juce::MemoryBlock &destData) override;
+    void setStateInformation(const void *data, int sizeInBytes) override;
 
     //==============================================================================
     void setBypassState(bool state) { bypassEnable = state; };
@@ -78,7 +78,7 @@ public:
     bool getDataDumpEnable() const { return dataDumpEnable; };
     void setGainValue(float value) { gain = value; };
     float getGainValue() const { return gain; };
-    void* getAlgoHandle() const { return algo_handle; };
+    void *getAlgoHandle() const { return algo_handle; };
 
 private:
     //==============================================================================
@@ -88,8 +88,8 @@ private:
     bool dataDumpEnable = false;
     bool isLicenseValid = false;
 
-    uint64_t ProcessBlockCounter = 0;
-    uint64_t AlgoFrameCounter = 0;
+    uint64_t processBlockCounter = 0;
+    uint64_t algoFrameCounter = 0;
 
     const int block_size = 2048;
     void *algo_handle = nullptr;
@@ -99,14 +99,14 @@ private:
     float *read_buf[2] = {0};
     int write_index = 0;
     int read_index = 0;
-    float *InputBuffer = nullptr;
-    float *OutputBuffer = nullptr;
-    juce::File DataDumpDir, OriginDataDumpFile[2], DownSampleDataDumpFile[2], UpSampleDataDumpFile[2];
+    float *inputBuffer = nullptr;
+    float *outputBuffer = nullptr;
+    juce::File dataDumpDir, originDataDumpFile[2], downSampleDataDumpFile[2], upSampleDataDumpFile[2];
 
     double originalSampleRate = 0; // default sample rate
     double targetSampleRate = 16000.0f;
     juce::WindowedSincInterpolator downSampler[2];
     juce::WindowedSincInterpolator upSampler[2];
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)
 };

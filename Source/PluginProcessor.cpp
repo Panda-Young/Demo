@@ -25,14 +25,14 @@ extern juce::FileLogger *globalLogger;
 
 DemoAudioProcessor::DemoAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       )
+    : AudioProcessor(BusesProperties()
+#if !JucePlugin_IsMidiEffect
+#if !JucePlugin_IsSynth
+                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+      )
 #endif
 {
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
@@ -143,13 +143,13 @@ DemoAudioProcessor::DemoAudioProcessor()
         downSampler[i].reset();
         upSampler[i].reset();
     }
-    InputBuffer = (float *)calloc(block_size * 2, sizeof(float));
-    if (InputBuffer == nullptr) {
-        LOG_MSG(LOG_ERROR, "Failed to allocate InputBuffer");
+    inputBuffer = (float *)calloc(block_size * 2, sizeof(float));
+    if (inputBuffer == nullptr) {
+        LOG_MSG(LOG_ERROR, "Failed to allocate inputBuffer");
     }
-    OutputBuffer = (float *)calloc(block_size * 2, sizeof(float));
-    if (OutputBuffer == nullptr) {
-        LOG_MSG(LOG_ERROR, "Failed to allocate OutputBuffer");
+    outputBuffer = (float *)calloc(block_size * 2, sizeof(float));
+    if (outputBuffer == nullptr) {
+        LOG_MSG(LOG_ERROR, "Failed to allocate outputBuffer");
     }
 
     char version[32] = {0};
@@ -182,13 +182,13 @@ DemoAudioProcessor::~DemoAudioProcessor()
             read_buf[i] = nullptr;
         }
     }
-    if (InputBuffer != nullptr) {
-        free(InputBuffer);
-        InputBuffer = nullptr;
+    if (inputBuffer != nullptr) {
+        free(inputBuffer);
+        inputBuffer = nullptr;
     }
-    if (OutputBuffer != nullptr) {
-        free(OutputBuffer);
-        OutputBuffer = nullptr;
+    if (outputBuffer != nullptr) {
+        free(outputBuffer);
+        outputBuffer = nullptr;
     }
     if (algo_handle != nullptr) {
         algo_deinit(algo_handle);
@@ -212,35 +212,35 @@ const juce::String DemoAudioProcessor::getName() const
 
 bool DemoAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
+#if JucePlugin_WantsMidiInput
     LOG_MSG(LOG_DEBUG, "acceptsMidi: true");
     return true;
-   #else
+#else
     LOG_MSG(LOG_DEBUG, "acceptsMidi: false");
     return false;
-   #endif
+#endif
 }
 
 bool DemoAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
-   LOG_MSG(LOG_DEBUG, "producesMidi: true");
+#if JucePlugin_ProducesMidiOutput
+    LOG_MSG(LOG_DEBUG, "producesMidi: true");
     return true;
-   #else
+#else
     LOG_MSG(LOG_DEBUG, "producesMidi: false");
     return false;
-   #endif
+#endif
 }
 
 bool DemoAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
     return true;
-   #else
+#else
     LOG_MSG(LOG_DEBUG, "isMidiEffect: false");
     return false;
-   #endif
+#endif
 }
 
 double DemoAudioProcessor::getTailLengthSeconds() const
@@ -257,8 +257,8 @@ double DemoAudioProcessor::getTailLengthSeconds() const
 int DemoAudioProcessor::getNumPrograms()
 {
     LOG_MSG(LOG_DEBUG, "getNumPrograms: 1");
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,
+              // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int DemoAudioProcessor::getCurrentProgram()
@@ -267,18 +267,18 @@ int DemoAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void DemoAudioProcessor::setCurrentProgram (int index)
+void DemoAudioProcessor::setCurrentProgram(int index)
 {
     LOG_MSG(LOG_INFO, "setCurrentProgram: index=" + std::to_string(index));
 }
 
-const juce::String DemoAudioProcessor::getProgramName (int index)
+const juce::String DemoAudioProcessor::getProgramName(int index)
 {
     LOG_MSG(LOG_INFO, "getProgramName: index=" + std::to_string(index));
     return {};
 }
 
-void DemoAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void DemoAudioProcessor::changeProgramName(int index, const juce::String &newName)
 {
     std::ostringstream oss;
     oss << "changeProgramName: index=" << index << ", newName=" << newName.toStdString();
@@ -286,21 +286,21 @@ void DemoAudioProcessor::changeProgramName (int index, const juce::String& newNa
 }
 
 //==============================================================================
-void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     this->originalSampleRate = sampleRate;
     LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
-                       ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
-                       ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate ) + " milliseconds");
+                          ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
+                          ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " milliseconds");
 
     setLatencySamples(block_size);
-    ProcessBlockCounter = 0;
+    processBlockCounter = 0;
 
     juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
-    DataDumpDir = UserDesktop.getChildFile(JucePlugin_Name + juce::String("_DataDump"));
-    DataDumpDir.createDirectory();
+    dataDumpDir = UserDesktop.getChildFile(JucePlugin_Name + juce::String("_DataDump"));
+    dataDumpDir.createDirectory();
 
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -310,12 +310,12 @@ void DemoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     for (auto channel = 0; channel < 2; channel++) {
         juce::String Suffix = juce::String(channel) + ".pcm";
-        OriginDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "original_" + Suffix);
-        OriginDataDumpFile[channel].create();
-        DownSampleDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "downSampled_" + Suffix);
-        DownSampleDataDumpFile[channel].create();
-        UpSampleDataDumpFile[channel] = DataDumpDir.getChildFile(TimeStamp + "upSampled_" + Suffix);
-        UpSampleDataDumpFile[channel].create();
+        originDataDumpFile[channel] = dataDumpDir.getChildFile(TimeStamp + "original_" + Suffix);
+        originDataDumpFile[channel].create();
+        downSampleDataDumpFile[channel] = dataDumpDir.getChildFile(TimeStamp + "downSampled_" + Suffix);
+        downSampleDataDumpFile[channel].create();
+        upSampleDataDumpFile[channel] = dataDumpDir.getChildFile(TimeStamp + "upSampled_" + Suffix);
+        upSampleDataDumpFile[channel].create();
     }
 }
 
@@ -323,61 +323,60 @@ void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    if (ProcessBlockCounter) {
+    if (processBlockCounter) {
         for (int channel = 0; channel < 2; channel++) {
-            convertPCMtoWAV(OriginDataDumpFile[channel], 1, originalSampleRate, 32, 3);
-            convertPCMtoWAV(DownSampleDataDumpFile[channel], 1, targetSampleRate, 32, 3);
-            convertPCMtoWAV(UpSampleDataDumpFile[channel], 1, originalSampleRate, 32, 3);
+            convertPCMtoWAV(originDataDumpFile[channel], 1, originalSampleRate, 32, 3);
+            convertPCMtoWAV(downSampleDataDumpFile[channel], 1, targetSampleRate, 32, 3);
+            convertPCMtoWAV(upSampleDataDumpFile[channel], 1, originalSampleRate, 32, 3);
         }
     }
-    if (DataDumpDir.isDirectory()) {
+    if (dataDumpDir.isDirectory()) {
         juce::Array<juce::File> files;
-        DataDumpDir.findChildFiles(files, juce::File::findFiles, false);
+        dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
         if (files.size() == 0) {
-            DataDumpDir.deleteRecursively();
+            dataDumpDir.deleteRecursively();
         }
     }
-    ProcessBlockCounter = 0;
+    processBlockCounter = 0;
 
     LOG_MSG(LOG_INFO, "released Resources");
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool DemoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool DemoAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+#if JucePlugin_IsMidiEffect
+    juce::ignoreUnused(layouts);
     return true;
-  #else
+#else
     // This is the place where you check if the layout is supported.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-    // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
+        // This checks if the input layout matches the output layout
+#if !JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
-   #endif
+#endif
 
     LOG_MSG(LOG_DEBUG, "OutputChannelSet=" + std::to_string(layouts.getMainOutputChannelSet().size()) +
-                       ", InputChannelSet=" + std::to_string(layouts.getMainInputChannelSet().size()));
+                           ", InputChannelSet=" + std::to_string(layouts.getMainInputChannelSet().size()));
     return true;
-  #endif
+#endif
 }
 #endif
 
-void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
 {
     if (isLicenseValid == false) {
         return;
     }
     clock_t start = clock();
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     int numSamples = buffer.getNumSamples();
-    if (ProcessBlockCounter++ == 0) {
+    if (processBlockCounter++ == 0) {
         LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples) +
                               ", totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
                               ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels) +
@@ -408,11 +407,11 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             } else {
                 if (dataDumpEnable) {
                     for (int channel = 0; channel < totalNumInputChannels; channel++) {
-                        dumpFloatPCMData(OriginDataDumpFile[channel], write_buf[channel], block_size);
+                        dumpFloatPCMData(originDataDumpFile[channel], write_buf[channel], block_size);
                     }
                 }
                 const float downSampledFactor = originalSampleRate / targetSampleRate;
-                 // Round up to prevent boundary value loss
+                // Round up to prevent boundary value loss
                 const int downSampledNumSamples = (block_size + downSampledFactor - 1) / downSampledFactor;
                 juce::AudioBuffer<float> downSampledBuffer(totalNumInputChannels, downSampledNumSamples);
                 const float upSampledFactor = targetSampleRate / originalSampleRate;
@@ -425,7 +424,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                     downSampler[channel].reset();
                     downSampler[channel].process(downSampledFactor, write_buf[channel], downSampledpWptr, downSampledNumSamples);
                     if (dataDumpEnable) {
-                        dumpFloatPCMData(DownSampleDataDumpFile[channel], downSampledpRptr, downSampledNumSamples);
+                        dumpFloatPCMData(downSampleDataDumpFile[channel], downSampledpRptr, downSampledNumSamples);
                     }
                     int ret = algo_process(algo_handle, downSampledpRptr, downSampledpWptr, downSampledNumSamples);
                     if (ret != 0) {
@@ -434,7 +433,7 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
                     upSampler[channel].reset();
                     upSampler[channel].process(upSampledFactor, downSampledpRptr, upSampledpWptr, block_size);
                     if (dataDumpEnable) {
-                        dumpFloatPCMData(UpSampleDataDumpFile[channel], upSampledpRptr, block_size);
+                        dumpFloatPCMData(upSampleDataDumpFile[channel], upSampledpRptr, block_size);
                     }
                     for (int i = 0; i < block_size; i++) {
                         write_buf[channel][i] = upSampledBuffer.getSample(channel, i);
@@ -462,8 +461,8 @@ void DemoAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     }
 
     clock_t stop = clock();
-    LOG_MSG(LOG_DEBUG, "ProcessBlockCounter = " + std::to_string(ProcessBlockCounter) +
-                       ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
+    LOG_MSG(LOG_DEBUG, "processBlockCounter = " + std::to_string(processBlockCounter) +
+                           ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
 }
 
 //==============================================================================
@@ -476,14 +475,14 @@ bool DemoAudioProcessor::hasEditor() const
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor* DemoAudioProcessor::createEditor()
+juce::AudioProcessorEditor *DemoAudioProcessor::createEditor()
 {
     LOG_MSG(LOG_INFO, "create editor");
-    return new DemoAudioProcessorEditor (*this);
+    return new DemoAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void DemoAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
@@ -507,7 +506,7 @@ void DemoAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     LOG_MSG(LOG_INFO, "store parameters to memory block:\n    " + tree.toXmlString().toStdString());
 }
 
-void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
@@ -549,7 +548,7 @@ void DemoAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 
 //==============================================================================
 // This creates new instances of the plugin..
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
 {
     return new DemoAudioProcessor();
 }

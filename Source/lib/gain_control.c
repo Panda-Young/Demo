@@ -7,8 +7,8 @@
  **************************************************************************/
 
 #include "gain_control.h"
-#include <math.h>
 #include "../Logger.h"
+#include <math.h>
 
 // Define minimum and maximum values for the gain factor
 #define MIN_GAIN_FACTOR 0.00001f // A value close to 0 but not 0, to avoid division by zero or extremely small gains

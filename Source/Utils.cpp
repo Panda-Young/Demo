@@ -103,7 +103,7 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft, const fl
     }
 }
 
-void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float>& buffer)
+void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float> &buffer)
 {
     std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
     if (!outFile) {
