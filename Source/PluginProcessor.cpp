@@ -282,14 +282,20 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H%M%S_", std::localtime(&now_time));
     juce::String TimeStamp = juce::String(timeStr);
     processedDataDumpFile = dataDumpDir.getChildFile(TimeStamp + "processed.pcm");
-    processedDataDumpFile.create();
+    if (processedDataDumpFile.create().wasOk()) {
+        LOG_MSG(LOG_DEBUG, "Created data dump file: " + processedDataDumpFile.getFullPathName().toStdString());
+    } else {
+        LOG_MSG(LOG_ERROR, "Failed to create data dump file: " + processedDataDumpFile.getFullPathName().toStdString());
+    }
 }
 
 void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    convertPCMtoWAV(processedDataDumpFile, originalChannels, originalSampleRate, 32, 3);
+    if (processBlockCounter) {
+        convertPCMtoWAV(processedDataDumpFile, originalChannels, originalSampleRate, 32, 3);
+    }
     if (dataDumpDir.isDirectory()) {
         juce::Array<juce::File> files;
         dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
@@ -447,22 +453,24 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
     juce::ValueTree tree = juce::ValueTree::readFromData(data, sizeInBytes);
-    if (tree.isValid()) {
+    if (tree.isValid() && tree.hasType("Parameters")) {
         apvts.state = tree;
         LOG_MSG(LOG_INFO, "restore parameters from memory block:\n" + apvts.state.toXmlString().toStdString());
-        bypassEnable = tree.getProperty("bypassEnable", bypassEnable);
-        dataDumpEnable = tree.getProperty("dataDumpEnable", dataDumpEnable);
-        gain = tree.getProperty("gain", gain);
-        if (algo_handle != nullptr) {
-            int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
-            if (ret != 0) {
-                LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
-            }
+        bypassEnable = static_cast<bool>(apvts.getRawParameterValue("bypassEnable")->load());
+        dataDumpEnable = static_cast<bool>(apvts.getRawParameterValue("dataDumpEnable")->load());
+        gain = apvts.getRawParameterValue("gain")->load();
+        int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
+        if (ret != 0) {
+            LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
         }
-        int logLevel = tree.getProperty("logLevel", globalLogLevel);
-        set_log_level((LogLevel)logLevel);
+        set_log_level(static_cast<LogLevel>(apvts.getRawParameterValue("logLevel")->load() + 1));
     } else {
-        LOG_MSG(LOG_ERROR, "Failed to restore parameters from memory block");
+        if (!tree.hasType("Parameters")) {
+            LOG_MSG(LOG_DEBUG, "Read from memory block: " + tree.toXmlString().toStdString());
+            LOG_MSG(LOG_ERROR, "Due to a major version update, you may need to save your settings as a preset again.");
+        } else {
+            LOG_MSG(LOG_ERROR, "Failed to restore parameters from memory block");
+        }
     }
 }
 

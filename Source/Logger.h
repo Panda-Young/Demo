@@ -33,8 +33,6 @@ extern juce::FileLogger *globalLogger;
 extern "C" {
 #endif
 
-extern LogLevel globalLogLevel;
-
 #define LOG_MSG_C(level, message) log_msg_c(level, message, __FILE_NAME__, __FUNCTION_NAME__, __LINE__)
 
 void log_msg_c(LogLevel level, const char *message, const char *file, const char *function, int line);

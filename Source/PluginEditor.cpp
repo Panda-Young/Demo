@@ -134,8 +134,7 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
 {
     if (button == &bypassButton) {
         audioProcessor.setBypassState(!audioProcessor.getBypassState());
-        std::string msg = "Bypass is " + std::string(audioProcessor.getBypassState() ? "enabled" : "disabled");
-        LOG_MSG(LOG_INFO, msg);
+        LOG_MSG(LOG_INFO, "Bypass is " + std::string(audioProcessor.getBypassState() ? "enabled" : "disabled"));
     } else if (button == &versionButton) {
         versionButtonClickedTimes++;
         if (versionButtonClickedTimes == 5) {
@@ -148,10 +147,10 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
         }
     } else if (button == &dataDumpButton) {
         audioProcessor.setDataDumpEnable(dataDumpButton.getToggleState());
-        std::string msg = "Data dump is " + std::string(audioProcessor.getDataDumpEnable() ? "enabled" : "disabled");
-        LOG_MSG(LOG_INFO, msg);
+        LOG_MSG(LOG_INFO, "Data dump is " + std::string(audioProcessor.getDataDumpEnable() ? "enabled" : "disabled"));
     } else {
-        LOG_MSG(LOG_WARN, "Unknown button clicked"); // Should never happen
+        // program should not reach here
+        LOG_MSG(LOG_WARN, "Unknown button clicked");
     }
     audioProcessor.setAnyParamChanged(true);
 }
@@ -173,13 +172,8 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
 void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
 {
     if (comboBox == &logLevelComboBox) {
-        if (logLevelComboBox.getSelectedId() != globalLogLevel) {
-            globalLogLevel = (LogLevel)logLevelComboBox.getSelectedId();
-            if (globalLogLevel < LOG_DEBUG || globalLogLevel > LOG_OFF) {
-                globalLogLevel = LOG_INFO;
-            }
-            LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
-        }
+        set_log_level((LogLevel)logLevelComboBox.getSelectedId());
+        LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
     }
     audioProcessor.setAnyParamChanged(true);
 }
