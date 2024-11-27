@@ -33,8 +33,8 @@
 #define SLIDER_TEXTBOX_WIDTH 100
 #define SLIDER_TEXTBOX_HEIGHT 20
 
-#define ENABLE_COLOR juce::Colours::lightgreen
-#define DISABLE_COLOR juce::Colours::lightslategrey
+#define LABEL_WIDTH 100
+#define LABEL_HEIGHT 20
 
 //==============================================================================
 DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
@@ -49,9 +49,10 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     versionButton.setLookAndFeel(&customLookAndFeel);
 
     bypassButton.setButtonText("Bypass");
-    bypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
     bypassButton.addListener(this);
     addAndMakeVisible(bypassButton);
+    bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.apvts, "bypassEnable", bypassButton);
 
     // Initialize ComboBox but don't make it visible yet
     logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
@@ -59,28 +60,35 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     logLevelComboBox.addItem("WARN", LOG_WARN);
     logLevelComboBox.addItem("ERROR", LOG_ERROR);
     logLevelComboBox.addItem("OFF", LOG_OFF);
-    logLevelComboBox.setSelectedId(globalLogLevel);
     addAndMakeVisible(logLevelComboBox);
     logLevelComboBox.setVisible(false);
     logLevelComboBox.addListener(this);
+    logLevelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        audioProcessor.apvts, "logLevel", logLevelComboBox);
 
     dataDumpButton.setButtonText("Data Dump");
-    dataDumpButton.setToggleState(audioProcessor.getDataDumpEnable(), juce::NotificationType::dontSendNotification);
     dataDumpButton.addListener(this);
     addAndMakeVisible(dataDumpButton);
     dataDumpButton.setVisible(false);
+    dataDumpAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.apvts, "dataDumpEnable", dataDumpButton);
 
     gainSlider.setSliderStyle(juce::Slider::Rotary);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
-    gainSlider.setRange(-20.0f, 20.0f, 0.1f);
-    gainSlider.setValue(audioProcessor.getGainValue());
     gainSlider.addListener(this);
     addAndMakeVisible(gainSlider);
+    gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.apvts, "gain", gainSlider);
+
+    gainLabel.setText("Gain", juce::dontSendNotification);
+    gainLabel.attachToComponent(&gainSlider, true);
+    gainLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(&gainLabel);
 
     setSize(UI_WIDTH, UI_HEIGHT);
-    if (getPluginType() == 3 &&
-        extractHostAppName() == "Adobe Audition" &&
-        getAuditionVersion() >= 0 && getAuditionVersion() <= 2020) {
+    if (audioProcessor.getUsedPluginType() == 3 &&
+        audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
+        audioProcessor.getUsedHostAppVersion() >= 0 && audioProcessor.getUsedHostAppVersion() <= 2020) {
         float scaleFactor = GetDpiForSystem() / 96.0f; // DPI scaling for Windows
         setSize(UI_WIDTH * scaleFactor, UI_HEIGHT * scaleFactor);
     }
@@ -126,7 +134,6 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
 {
     if (button == &bypassButton) {
         audioProcessor.setBypassState(!audioProcessor.getBypassState());
-        bypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
         std::string msg = "Bypass is " + std::string(audioProcessor.getBypassState() ? "enabled" : "disabled");
         LOG_MSG(LOG_INFO, msg);
     } else if (button == &versionButton) {
@@ -152,13 +159,12 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
 void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
 {
     if (slider == &gainSlider) {
+        LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(audioProcessor.getGainValue()) + " dB");
         audioProcessor.setGainValue(gainSlider.getValue());
         float gainValue = audioProcessor.getGainValue();
         int ret = algo_set_param(audioProcessor.getAlgoHandle(), ALGO_PARAM2, &gainValue, sizeof(float));
         if (ret != E_OK) {
-            LOG_MSG(LOG_INFO, "algo_set_param failed. ret = " + std::to_string(ret));
-        } else {
-            LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(audioProcessor.getGainValue()) + " dB");
+            LOG_MSG(LOG_ERROR, "algo_set_param failed. ret = " + std::to_string(ret));
         }
     }
     audioProcessor.setAnyParamChanged(true);
@@ -176,13 +182,4 @@ void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
         }
     }
     audioProcessor.setAnyParamChanged(true);
-}
-
-void DemoAudioProcessorEditor::updateParameterDisplays()
-{
-    gainSlider.setValue(audioProcessor.getGainValue(), juce::NotificationType::dontSendNotification);
-    bypassButton.setColour(juce::TextButton::buttonColourId, audioProcessor.getBypassState() ? ENABLE_COLOR : DISABLE_COLOR);
-    logLevelComboBox.setSelectedId(globalLogLevel, juce::NotificationType::dontSendNotification);
-    dataDumpButton.setToggleState(audioProcessor.getDataDumpEnable(), juce::NotificationType::dontSendNotification);
-    LOG_MSG(LOG_INFO, "Parameter displays updated from restored state");
 }

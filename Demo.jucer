@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="ndQYFm" name="Demo" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginFormats="buildVST,buildVST3"
-              pluginManufacturer="Panda" version="1.4.0" projectLineFeed="&#13;&#10;">
+              pluginManufacturer="Panda" version="2.1.1" projectLineFeed="&#13;&#10;">
   <MAINGROUP id="A3A7Ql" name="Demo">
     <GROUP id="{553DCF37-AEB0-4548-5A47-D63C9DB6E300}" name="Source">
       <GROUP id="{D6925CB4-DB15-FA06-2BD8-4BA086BD493E}" name="lib">
@@ -82,8 +82,10 @@
     </VS2022>
     <VS2017 targetFolder="Builds/VisualStudio2017">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" headerPath="../../Source/lib" useRuntimeLibDLL="0"/>
-        <CONFIGURATION isDebug="0" name="Release" headerPath="../../Source/lib" useRuntimeLibDLL="0"/>
+        <CONFIGURATION isDebug="1" name="Debug" headerPath="../../Source/lib" useRuntimeLibDLL="0"
+                       winArchitecture="Win32"/>
+        <CONFIGURATION isDebug="0" name="Release" headerPath="../../Source/lib" useRuntimeLibDLL="0"
+                       winArchitecture="Win32"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_analytics" path="D:\Installation\JUCE\modules"/>

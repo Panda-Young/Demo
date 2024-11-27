@@ -26,6 +26,8 @@ extern "C" {
 }
 #endif
 
+#define MAX_SUPPORT_CHANNELS 2
+
 //==============================================================================
 /**
  */
@@ -70,6 +72,9 @@ public:
     void setStateInformation(const void *data, int sizeInBytes) override;
 
     //==============================================================================
+    int getUsedPluginType() { return pluginType; }
+    std::string getUsedHostAppName() { return hostAppName; }
+    int getUsedHostAppVersion() { return hostAppVersion; }
     void setBypassState(bool state) { bypassEnable = state; };
     bool getBypassState() const { return bypassEnable; };
     void setAnyParamChanged(bool state) { anyParamChanged = state; };
@@ -80,9 +85,15 @@ public:
     float getGainValue() const { return gain; };
     void *getAlgoHandle() const { return algo_handle; };
 
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
+    juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameters() };
+
 private:
     //==============================================================================
-    std::unique_ptr<juce::FileLogger> logger;
+    std::unique_ptr<juce::FileLogger> logger = nullptr;
+    int pluginType = -1;
+    std::string hostAppName = "";
+    int hostAppVersion = -1;
     bool bypassEnable = false;
     bool anyParamChanged = false;
     bool dataDumpEnable = false;
@@ -95,18 +106,14 @@ private:
     void *algo_handle = nullptr;
     float gain = 0.0f;
 
-    float *write_buf[2] = {0};
-    float *read_buf[2] = {0};
+    float *write_buf[MAX_SUPPORT_CHANNELS] = {0};
+    float *read_buf[MAX_SUPPORT_CHANNELS] = {0};
     int write_index = 0;
     int read_index = 0;
-    float *inputBuffer = nullptr;
-    float *outputBuffer = nullptr;
-    juce::File dataDumpDir, originDataDumpFile[2], downSampleDataDumpFile[2], upSampleDataDumpFile[2];
+    juce::File dataDumpDir, processedDataDumpFile;
 
-    double originalSampleRate = 0; // default sample rate
-    double targetSampleRate = 16000.0f;
-    juce::WindowedSincInterpolator downSampler[2];
-    juce::WindowedSincInterpolator upSampler[2];
+    double originalSampleRate = 0;
+    int originalChannels = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)
 };

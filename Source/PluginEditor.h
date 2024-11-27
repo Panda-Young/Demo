@@ -44,20 +44,25 @@ public:
 
     void buttonClicked(juce::Button *button) override;
     void comboBoxChanged(juce::ComboBox *comboBox) override;
-    void updateParameterDisplays();
     void sliderValueChanged(juce::Slider *slider) override;
 
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     DemoAudioProcessor &audioProcessor;
+    int versionButtonClickedTimes = 0;
+
+    CustomLookAndFeel customLookAndFeel;
     juce::TextButton versionButton;
     juce::ComboBox logLevelComboBox;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> logLevelAttachment;
     juce::ToggleButton dataDumpButton;
-    int versionButtonClickedTimes = 0;
-    CustomLookAndFeel customLookAndFeel;
-
-    juce::TextButton bypassButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> dataDumpAttachment;
+    juce::ToggleButton bypassButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
     juce::Slider gainSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
+    juce::Label gainLabel;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessorEditor)
 };

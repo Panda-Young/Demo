@@ -45,6 +45,10 @@ DemoAudioProcessor::DemoAudioProcessor()
     globalLogger = logger.get();
     set_log_level(LOG_INFO);
 
+    pluginType = getPluginType();
+    hostAppName = extractHostAppName();
+    hostAppVersion = getAuditionVersion();
+
     RegType_t regType = checkRegType();
     if (regType == NoReg) {
         juce::DialogWindow::LaunchOptions options;
@@ -119,18 +123,6 @@ DemoAudioProcessor::DemoAudioProcessor()
         return;
     }
 
-#if 0
-    char licenseFileName[64] = JucePlugin_Name;
-    strcat(licenseFileName, "_VST_Plugin.lic");
-    juce::File licenseFile = tempDir.getChildFile(licenseFileName);
-    if (!checkLicenseFile(licenseFile)) {
-        isLicenseValid = false;
-        return;
-    } else {
-        isLicenseValid = true;
-    }
-#endif
-
     for (int i = 0; i < 2; i++) {
         write_buf[i] = (float *)calloc(block_size, sizeof(float));
         if (write_buf[i] == nullptr) {
@@ -140,21 +132,10 @@ DemoAudioProcessor::DemoAudioProcessor()
         if (read_buf[i] == nullptr) {
             LOG_MSG(LOG_ERROR, "Failed to allocate read_buf[" + std::to_string(i) + "]");
         }
-        downSampler[i].reset();
-        upSampler[i].reset();
-    }
-    inputBuffer = (float *)calloc(block_size * 2, sizeof(float));
-    if (inputBuffer == nullptr) {
-        LOG_MSG(LOG_ERROR, "Failed to allocate inputBuffer");
-    }
-    outputBuffer = (float *)calloc(block_size * 2, sizeof(float));
-    if (outputBuffer == nullptr) {
-        LOG_MSG(LOG_ERROR, "Failed to allocate outputBuffer");
     }
 
     char version[32] = {0};
-    int ret = 0;
-    ret = get_algo_version(version);
+    int ret = get_algo_version(version);
     if (ret != 0) {
         LOG_MSG(LOG_ERROR, "Failed to get_algo_version. ret = " + std::to_string(ret));
     } else {
@@ -181,14 +162,6 @@ DemoAudioProcessor::~DemoAudioProcessor()
             free(read_buf[i]);
             read_buf[i] = nullptr;
         }
-    }
-    if (inputBuffer != nullptr) {
-        free(inputBuffer);
-        inputBuffer = nullptr;
-    }
-    if (outputBuffer != nullptr) {
-        free(outputBuffer);
-        outputBuffer = nullptr;
     }
     if (algo_handle != nullptr) {
         algo_deinit(algo_handle);
@@ -290,7 +263,8 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    this->originalSampleRate = sampleRate;
+    originalSampleRate = sampleRate;
+    originalChannels = getTotalNumInputChannels();
     LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
                           ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
                           ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " milliseconds");
@@ -307,29 +281,15 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     char timeStr[20] = {0};
     std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H%M%S_", std::localtime(&now_time));
     juce::String TimeStamp = juce::String(timeStr);
-
-    for (auto channel = 0; channel < 2; channel++) {
-        juce::String Suffix = juce::String(channel) + ".pcm";
-        originDataDumpFile[channel] = dataDumpDir.getChildFile(TimeStamp + "original_" + Suffix);
-        originDataDumpFile[channel].create();
-        downSampleDataDumpFile[channel] = dataDumpDir.getChildFile(TimeStamp + "downSampled_" + Suffix);
-        downSampleDataDumpFile[channel].create();
-        upSampleDataDumpFile[channel] = dataDumpDir.getChildFile(TimeStamp + "upSampled_" + Suffix);
-        upSampleDataDumpFile[channel].create();
-    }
+    processedDataDumpFile = dataDumpDir.getChildFile(TimeStamp + "processed.pcm");
+    processedDataDumpFile.create();
 }
 
 void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    if (processBlockCounter) {
-        for (int channel = 0; channel < 2; channel++) {
-            convertPCMtoWAV(originDataDumpFile[channel], 1, originalSampleRate, 32, 3);
-            convertPCMtoWAV(downSampleDataDumpFile[channel], 1, targetSampleRate, 32, 3);
-            convertPCMtoWAV(upSampleDataDumpFile[channel], 1, originalSampleRate, 32, 3);
-        }
-    }
+    convertPCMtoWAV(processedDataDumpFile, originalChannels, originalSampleRate, 32, 3);
     if (dataDumpDir.isDirectory()) {
         juce::Array<juce::File> files;
         dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
@@ -384,11 +344,15 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     }
 
     int buffer_index = 0;
-    float *p_write[2] = {0};
-    float *p_read[2] = {0};
+    float *p_write[MAX_SUPPORT_CHANNELS] = {0};
+    float *p_read[MAX_SUPPORT_CHANNELS] = {0};
+    int valid_channels = MIN(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
+    if (originalChannels != totalNumInputChannels) {
+        originalChannels = totalNumInputChannels;
+    }
 
     while (buffer_index != numSamples) {
-        for (int channel = 0; channel < totalNumInputChannels; channel++) {
+        for (int channel = 0; channel < valid_channels; channel++) {
             p_write[channel] = write_buf[channel];
             p_read[channel] = read_buf[channel];
         }
@@ -396,7 +360,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
         n_samples_to_write = MIN(numSamples - buffer_index, block_size - write_index);
         n_samples_to_write = MIN(n_samples_to_write, block_size - read_index);
         for (int i = 0; i < n_samples_to_write; i++) {
-            for (int channel = 0; channel < totalNumInputChannels; channel++) {
+            for (int channel = 0; channel < valid_channels; channel++) {
                 write_buf[channel][write_index + i] = buffer.getSample(channel, buffer_index + i);
             }
         }
@@ -405,50 +369,29 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
             if (bypassEnable) {
                 // do nothing or copy the input buffer to the output buffer
             } else {
-                if (dataDumpEnable) {
-                    for (int channel = 0; channel < totalNumInputChannels; channel++) {
-                        dumpFloatPCMData(originDataDumpFile[channel], write_buf[channel], block_size);
-                    }
-                }
-                const float downSampledFactor = originalSampleRate / targetSampleRate;
-                // Round up to prevent boundary value loss
-                const int downSampledNumSamples = (block_size + downSampledFactor - 1) / downSampledFactor;
-                juce::AudioBuffer<float> downSampledBuffer(totalNumInputChannels, downSampledNumSamples);
-                const float upSampledFactor = targetSampleRate / originalSampleRate;
-                juce::AudioBuffer<float> upSampledBuffer(totalNumInputChannels, block_size);
-                for (int channel = 0; channel < totalNumInputChannels; channel++) {
-                    float *downSampledpWptr = downSampledBuffer.getWritePointer(channel);
-                    const float *downSampledpRptr = downSampledBuffer.getReadPointer(channel);
-                    float *upSampledpWptr = upSampledBuffer.getWritePointer(channel);
-                    const float *upSampledpRptr = upSampledBuffer.getReadPointer(channel);
-                    downSampler[channel].reset();
-                    downSampler[channel].process(downSampledFactor, write_buf[channel], downSampledpWptr, downSampledNumSamples);
-                    if (dataDumpEnable) {
-                        dumpFloatPCMData(downSampleDataDumpFile[channel], downSampledpRptr, downSampledNumSamples);
-                    }
-                    int ret = algo_process(algo_handle, downSampledpRptr, downSampledpWptr, downSampledNumSamples);
+                for (int ch = 0; ch < valid_channels; ch++) {
+                    int ret = algo_process(algo_handle, write_buf[ch], write_buf[ch], block_size);
                     if (ret != 0) {
                         LOG_MSG(LOG_ERROR, "Failed to algo_process. ret = " + std::to_string(ret));
                     }
-                    upSampler[channel].reset();
-                    upSampler[channel].process(upSampledFactor, downSampledpRptr, upSampledpWptr, block_size);
-                    if (dataDumpEnable) {
-                        dumpFloatPCMData(upSampleDataDumpFile[channel], upSampledpRptr, block_size);
-                    }
-                    for (int i = 0; i < block_size; i++) {
-                        write_buf[channel][i] = upSampledBuffer.getSample(channel, i);
+                }
+                if (dataDumpEnable) {
+                    if (valid_channels == 1) {
+                        dumpFloatPCMData(processedDataDumpFile, write_buf[0], block_size);
+                    } else if (valid_channels == MAX_SUPPORT_CHANNELS) {
+                        dumpFloatPCMData(processedDataDumpFile, write_buf[0], write_buf[1], block_size);
                     }
                 }
             }
         }
         for (int i = 0; i < n_samples_to_write; i++) {
-            for (int channel = 0; channel < totalNumInputChannels; channel++) {
+            for (int channel = 0; channel < valid_channels; channel++) {
                 buffer.setSample(channel, buffer_index + i, read_buf[channel][read_index + i]);
             }
         }
         buffer_index += n_samples_to_write;
         if (write_index == block_size) {
-            for (int channel = 0; channel < totalNumInputChannels; channel++) {
+            for (int channel = 0; channel < valid_channels; channel++) {
                 write_buf[channel] = p_read[channel];
                 read_buf[channel] = p_write[channel];
             }
@@ -490,20 +433,13 @@ void DemoAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
     if (anyParamChanged == false) {
         // in VST3 plugin, before restore parameters, call getStateInformation will store the default parameters
         // This will overwrite the user's last selection.
-        LOG_MSG(LOG_INFO, "none of the parameters have been changed, skip store parameters to memory block");
+        LOG_MSG(LOG_WARN, "none of the parameters have been changed, skip store parameters to memory block");
         return;
     }
-    char dataTreeName[64] = JucePlugin_Name;
-    strcat(dataTreeName, "AudioProcessor");
-    juce::ValueTree tree(dataTreeName);
-    tree.setProperty("bypassEnable", bypassEnable, nullptr);
-    tree.setProperty("gain", gain, nullptr);
-    tree.setProperty("globalLogLevel", globalLogLevel, nullptr);
-    tree.setProperty("dataDumpEnable", dataDumpEnable, nullptr);
     juce::MemoryOutputStream stream(destData, false);
-    tree.writeToStream(stream);
+    apvts.state.writeToStream(stream);
 
-    LOG_MSG(LOG_INFO, "store parameters to memory block:\n    " + tree.toXmlString().toStdString());
+    LOG_MSG(LOG_INFO, "store parameters to memory block:\n" + apvts.state.toXmlString().toStdString());
 }
 
 void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
@@ -512,38 +448,33 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
     // whose contents will have been created by the getStateInformation() call.
     juce::ValueTree tree = juce::ValueTree::readFromData(data, sizeInBytes);
     if (tree.isValid()) {
+        apvts.state = tree;
+        LOG_MSG(LOG_INFO, "restore parameters from memory block:\n" + apvts.state.toXmlString().toStdString());
         bypassEnable = tree.getProperty("bypassEnable", bypassEnable);
-        gain = tree.getProperty("gain", gain);
-        int logLevel = tree.getProperty("globalLogLevel", globalLogLevel);
-        if (logLevel != globalLogLevel) {
-            globalLogLevel = (LogLevel)logLevel;
-            if (globalLogLevel < LOG_DEBUG || globalLogLevel > LOG_OFF) {
-                globalLogLevel = LOG_INFO;
-            }
-            set_log_level(globalLogLevel);
-        }
         dataDumpEnable = tree.getProperty("dataDumpEnable", dataDumpEnable);
+        gain = tree.getProperty("gain", gain);
         if (algo_handle != nullptr) {
             int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
             if (ret != 0) {
                 LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
             }
         }
+        int logLevel = tree.getProperty("logLevel", globalLogLevel);
+        set_log_level((LogLevel)logLevel);
+    } else {
+        LOG_MSG(LOG_ERROR, "Failed to restore parameters from memory block");
     }
+}
 
-    LOG_MSG(LOG_INFO, "restore parameters from memory block:\n    " + tree.toXmlString().toStdString());
-
-    // in VST2 plugin, the editor is not created when setStateInformation is called
-    if (auto *editor = dynamic_cast<DemoAudioProcessorEditor *>(getActiveEditor())) {
-        // Ensure the current thread has the MessageManager lock
-        const juce::MessageManagerLock mmLock;
-        // Check if the lock was successfully acquired
-        if (!mmLock.lockWasGained()) {
-            LOG_MSG(LOG_ERROR, "Failed to lock MessageManager");
-            return;
-        }
-        editor->updateParameterDisplays();
-    }
+juce::AudioProcessorValueTreeState::ParameterLayout DemoAudioProcessor::createParameters()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout paramsLayout;
+    paramsLayout.add(std::make_unique<juce::AudioParameterFloat>("gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
+    paramsLayout.add(std::make_unique<juce::AudioParameterBool>("bypassEnable", "Bypass", false));
+    paramsLayout.add(std::make_unique<juce::AudioParameterBool>("dataDumpEnable", "Data Dump", false));
+    paramsLayout.add(std::make_unique<juce::AudioParameterChoice>("logLevel", "Log Level",
+                                                                 juce::StringArray{"DEBUG", "INFO", "WARN", "ERROR", "OFF"}, 1));
+    return paramsLayout;
 }
 
 //==============================================================================
