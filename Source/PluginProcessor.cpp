@@ -463,7 +463,8 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
         if (ret != 0) {
             LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
         }
-        set_log_level(static_cast<LogLevel>(apvts.getRawParameterValue("logLevel")->load() + 1));
+        int logLevelValue = static_cast<int>(apvts.getRawParameterValue("logLevel")->load() + 1);
+        set_log_level(static_cast<LogLevel>(logLevelValue));
     } else {
         if (!tree.hasType("Parameters")) {
             LOG_MSG(LOG_DEBUG, "Read from memory block: " + tree.toXmlString().toStdString());
