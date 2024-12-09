@@ -626,6 +626,7 @@ RegType_t regSoftware(juce::String strLicense)
     char licenseFileName[64] = JucePlugin_Name;
     strcat(licenseFileName, "_VST_Plugin.lic");
     juce::String filePath = licenseDir.getFullPathName() + "/" + licenseFileName;
+    strLicense = strLicense.trim();
     if (strLicense.length() == 39) {
         if (strLicense == hashStringFormat(getRegSequence(StrSerial, VIPReg), VIPReg)) {
             juce::File file(filePath);
