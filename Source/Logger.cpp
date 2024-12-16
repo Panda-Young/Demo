@@ -1,95 +1,104 @@
 /***************************************************************************
- * Description: logger
+ * Description:
  * version: 0.1.0
  * Author: Panda-Young
- * Date: 2024-07-20 02:01:56
+ * Date: 2024-11-22 20:01:57
  * Copyright (c) 2024 by Panda-Young, All Rights Reserved.
  **************************************************************************/
 
 #include "Logger.h"
-#include <ctime>
+#include <chrono>
 #include <iomanip>
-#include <juce_core/juce_core.h>
 #include <sstream>
-#include <windows.h>
 
-LogLevel globalLogLevel = LOG_INFO;
-juce::FileLogger *globalLogger = nullptr;
-
-void set_log_level(LogLevel level)
+Logger::Logger()
+    : currentLogLevel(LOG_INFO)
 {
-    globalLogLevel = level;
+    initializeLogger();
 }
 
-const char *getLogLevelString(LogLevel level)
+Logger::~Logger()
 {
-    switch (level) {
-    case LOG_DEBUG:
-        return "DEBUG";
-    case LOG_INFO:
-        return "INFO ";
-    case LOG_WARN:
-        return "WARN ";
-    case LOG_ERROR:
-        return "ERROR";
-    default:
-        return "UNKNOWN";
+}
+
+void Logger::initializeLogger()
+{
+    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+    char logFileName[64] = JucePlugin_Name;
+    strcat(logFileName, "_VST_Plugin.log");
+    juce::File logFile = tempDir.getChildFile(juce::String(logFileName));
+    char logStartMsg[128] = {0};
+    sprintf(logStartMsg, "%s VST Plugin %s", JucePlugin_Name, JucePlugin_VersionString);
+    fileLogger = std::make_unique<juce::FileLogger>(logFile, logStartMsg);
+}
+
+void Logger::logMsg(LogLevel level, const std::string &message, const char *file, const char *function, int line)
+{
+    std::lock_guard<std::mutex> lock(logMutex);
+    if (level >= currentLogLevel && fileLogger != nullptr) {
+        auto now = std::chrono::system_clock::now();
+        auto now_time_t = std::chrono::system_clock::to_time_t(now);
+        auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+        std::tm now_tm;
+        localtime_s(&now_tm, &now_time_t);
+
+        std::ostringstream timestamp;
+        timestamp << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
+        timestamp << '.' << std::setfill('0') << std::setw(3) << now_ms.count();
+
+        auto thread_id = std::this_thread::get_id();
+        std::ostringstream thread_id_str;
+        thread_id_str << thread_id;
+
+        std::string level_str;
+        switch (level) {
+        case LOG_DEBUG:
+            level_str = "DEBUG";
+            break;
+        case LOG_INFO:
+            level_str = "INFO";
+            break;
+        case LOG_WARN:
+            level_str = "WARN";
+            break;
+        case LOG_ERROR:
+            level_str = "ERROR";
+            break;
+        default:
+            level_str = "UNKNOWN";
+            break;
+        }
+
+        std::ostringstream logPrefix;
+        logPrefix << timestamp.str() << " [" << thread_id_str.str() << "] " << level_str << " "
+                  << file << "@" << function << ":" << line;
+
+        std::string logPrefixStr = logPrefix.str();
+        if (logPrefixStr.length() < 96) {
+            logPrefixStr.append(96 - logPrefixStr.length(), ' ');
+        }
+
+        std::ostringstream logMessage;
+        logMessage << logPrefixStr << " " << message;
+        fileLogger->logMessage(logMessage.str());
     }
 }
 
-std::string getCurrentTimeString()
+void Logger::setLogLevel(LogLevel level)
 {
-    auto now = juce::Time::getCurrentTime();
-    auto millis = now.toMilliseconds();
-    auto seconds = millis / 1000;
-    auto ms = millis % 1000;
-
-    std::time_t timeT = static_cast<std::time_t>(seconds);
-    std::tm localTime;
-#if JUCE_WINDOWS
-    localtime_s(&localTime, &timeT);
-#else
-    localtime_r(&timeT, &localTime);
-#endif
-
-    std::ostringstream oss;
-    oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
-    oss << "." << std::setw(3) << std::setfill('0') << ms;
-
-    return oss.str();
+    std::lock_guard<std::mutex> lock(logMutex);
+    currentLogLevel = level;
 }
 
-void logMsg(juce::FileLogger *logger, LogLevel level, const std::string &message,
-            const char *file, const char *function, int line)
+void log_msg(LogLevel level, const std::string &message, const char *file, const char *function, int line)
 {
-    if (level < globalLogLevel) {
-        return;
-    }
-    std::string timeStr = getCurrentTimeString();
-    int pid = static_cast<int>(::GetCurrentProcessId());
-    int tid = static_cast<int>(::GetCurrentThreadId());
-    std::string logLevelStr = getLogLevelString(level);
-
-    std::ostringstream oss;
-    oss << timeStr << " [" << pid << "." << tid << "] " << logLevelStr << " " << file << "@" << function << ":" << line;
-
-    std::string logPrefix = oss.str();
-    if (logPrefix.length() < 96) {
-        logPrefix.append(96 - logPrefix.length(), ' ');
-    }
-
-    logPrefix += " " + message;
-
-    if (logger != nullptr) {
-        logger->logMessage(logPrefix);
-    }
+    Logger::getInstance().logMsg(level, message, file, function, line);
 }
 
 extern "C" {
+
 void log_msg_c(LogLevel level, const char *message, const char *file, const char *function, int line)
 {
-    if (globalLogger != nullptr) {
-        logMsg(globalLogger, level, message, file, function, line);
-    }
+    log_msg(level, message, file, function, line);
 }
 }

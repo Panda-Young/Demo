@@ -19,7 +19,6 @@
 #include <JucePluginDefines.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
-extern juce::FileLogger *globalLogger;
 
 //==============================================================================
 
@@ -35,16 +34,6 @@ DemoAudioProcessor::DemoAudioProcessor()
       )
 #endif
 {
-    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-    char logFileName[64] = JucePlugin_Name;
-    strcat(logFileName, "_VST_Plugin.log");
-    juce::File logFile = tempDir.getChildFile(juce::String(logFileName));
-    char logStartMsg[128] = {0};
-    sprintf(logStartMsg, "%s VST Plugin %s", JucePlugin_Name, JucePlugin_VersionString);
-    logger = std::make_unique<juce::FileLogger>(logFile, logStartMsg);
-    globalLogger = logger.get();
-    set_log_level(LOG_INFO);
-
     pluginType = getPluginType();
     hostAppName = extractHostAppName();
     hostAppVersion = getAuditionVersion();
@@ -169,8 +158,6 @@ DemoAudioProcessor::~DemoAudioProcessor()
     }
 
     LOG_MSG(LOG_INFO, "AudioProcessor destroyed. Log stop. Closed plugins or software");
-    logger.reset();
-    globalLogger = nullptr;
 }
 
 //==============================================================================
@@ -316,10 +303,11 @@ bool DemoAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) cons
     return true;
 #else
     // This is the place where you check if the layout is supported.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() &&
+        layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-        // This checks if the input layout matches the output layout
+    // This checks if the input layout matches the output layout
 #if !JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
@@ -464,7 +452,7 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
             LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
         }
         int logLevelValue = static_cast<int>(apvts.getRawParameterValue("logLevel")->load() + 1);
-        set_log_level(static_cast<LogLevel>(logLevelValue));
+        logger.setLogLevel(static_cast<LogLevel>(logLevelValue));
     } else {
         if (!tree.hasType("Parameters")) {
             LOG_MSG(LOG_DEBUG, "Read from memory block: " + tree.toXmlString().toStdString());
@@ -478,11 +466,12 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 juce::AudioProcessorValueTreeState::ParameterLayout DemoAudioProcessor::createParameters()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout paramsLayout;
-    paramsLayout.add(std::make_unique<juce::AudioParameterChoice>("logLevel", "Log Level",
-                                                                 juce::StringArray{"DEBUG", "INFO", "WARN", "ERROR", "OFF"}, 1));
+    paramsLayout.add(std::make_unique<juce::AudioParameterChoice>(
+        "logLevel", "Log Level", juce::StringArray{"DEBUG", "INFO", "WARN", "ERROR", "OFF"}, 1));
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("dataDumpEnable", "Data Dump", false));
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("bypassEnable", "Bypass", false));
-    paramsLayout.add(std::make_unique<juce::AudioParameterFloat>("gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
+    paramsLayout.add(std::make_unique<juce::AudioParameterFloat>(
+        "gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
     return paramsLayout;
 }
 

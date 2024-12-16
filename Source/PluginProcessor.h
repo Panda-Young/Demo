@@ -88,10 +88,10 @@ public:
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameters() };
+    Logger& logger = Logger::getInstance();
 
 private:
     //==============================================================================
-    std::unique_ptr<juce::FileLogger> logger = nullptr;
     int pluginType = -1;
     std::string hostAppName = "";
     int hostAppVersion = -1;
