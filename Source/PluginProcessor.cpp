@@ -19,7 +19,6 @@
 #include <JucePluginDefines.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
-extern juce::FileLogger *globalLogger;
 
 //==============================================================================
 
@@ -35,16 +34,6 @@ DemoAudioProcessor::DemoAudioProcessor()
       )
 #endif
 {
-    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-    char logFileName[64] = JucePlugin_Name;
-    strcat(logFileName, "_VST_Plugin.log");
-    juce::File logFile = tempDir.getChildFile(juce::String(logFileName));
-    char logStartMsg[128] = {0};
-    sprintf(logStartMsg, "%s VST Plugin %s", JucePlugin_Name, JucePlugin_VersionString);
-    logger = std::make_unique<juce::FileLogger>(logFile, logStartMsg);
-    globalLogger = logger.get();
-    set_log_level(LOG_INFO);
-
     pluginType = getPluginType();
     hostAppName = extractHostAppName();
     hostAppVersion = getAuditionVersion();
@@ -169,8 +158,6 @@ DemoAudioProcessor::~DemoAudioProcessor()
     }
 
     LOG_MSG(LOG_INFO, "AudioProcessor destroyed. Log stop. Closed plugins or software");
-    logger.reset();
-    globalLogger = nullptr;
 }
 
 //==============================================================================
@@ -464,7 +451,7 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
             LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
         }
         int logLevelValue = static_cast<int>(apvts.getRawParameterValue("logLevel")->load() + 1);
-        set_log_level(static_cast<LogLevel>(logLevelValue));
+        logger.setLogLevel(static_cast<LogLevel>(logLevelValue));
     } else {
         if (!tree.hasType("Parameters")) {
             LOG_MSG(LOG_DEBUG, "Read from memory block: " + tree.toXmlString().toStdString());
