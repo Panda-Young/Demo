@@ -75,12 +75,13 @@ public:
     int getUsedPluginType() { return pluginType; }
     std::string getUsedHostAppName() { return hostAppName; }
     int getUsedHostAppVersion() { return hostAppVersion; }
-    void setBypassState(bool state) { bypassEnable = state; };
-    bool getBypassState() const { return bypassEnable; };
     void setAnyParamChanged(bool state) { anyParamChanged = state; };
     bool getAnyParamChanged() const { return anyParamChanged; };
-    void setDataDumpEnable(bool state) { dataDumpEnable = state; };
-    bool getDataDumpEnable() const { return dataDumpEnable; };
+    void setDataDumpState(bool state) { dataDumpEnable = state; };
+    bool getDataDumpState() const { return dataDumpEnable; };
+
+    void setBypassState(bool state) { bypassEnable = state; };
+    bool getBypassState() const { return bypassEnable; };
     void setGainValue(float value) { gain = value; };
     float getGainValue() const { return gain; };
     void *getAlgoHandle() const { return algo_handle; };

@@ -478,11 +478,11 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 juce::AudioProcessorValueTreeState::ParameterLayout DemoAudioProcessor::createParameters()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout paramsLayout;
-    paramsLayout.add(std::make_unique<juce::AudioParameterFloat>("gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
-    paramsLayout.add(std::make_unique<juce::AudioParameterBool>("bypassEnable", "Bypass", false));
-    paramsLayout.add(std::make_unique<juce::AudioParameterBool>("dataDumpEnable", "Data Dump", false));
     paramsLayout.add(std::make_unique<juce::AudioParameterChoice>("logLevel", "Log Level",
                                                                  juce::StringArray{"DEBUG", "INFO", "WARN", "ERROR", "OFF"}, 1));
+    paramsLayout.add(std::make_unique<juce::AudioParameterBool>("dataDumpEnable", "Data Dump", false));
+    paramsLayout.add(std::make_unique<juce::AudioParameterBool>("bypassEnable", "Bypass", false));
+    paramsLayout.add(std::make_unique<juce::AudioParameterFloat>("gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
     return paramsLayout;
 }
 

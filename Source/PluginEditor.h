@@ -22,7 +22,7 @@
 //==============================================================================
 /**
  */
-class CustomLookAndFeel : public juce::LookAndFeel_V4
+class BorderlessButtonLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     void drawButtonBackground(juce::Graphics &g, juce::Button &button, const juce::Colour &backgroundColour,
@@ -32,7 +32,33 @@ public:
     }
 };
 
-class DemoAudioProcessorEditor : public juce::AudioProcessorEditor, public juce::Button::Listener, public juce::Slider::Listener, public juce::ComboBox::Listener
+class ToggleButtonWithTextInsideLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    void drawToggleButton(juce::Graphics &g, juce::ToggleButton &button,
+                          bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    {
+        auto fontSize = juce::jmin(15.0f, button.getHeight() * 0.75f);
+        auto tickWidth = button.getWidth() * 0.8f;
+        auto cornerSize = juce::jmin(button.getHeight(), button.getWidth()) * 0.15f;
+
+        juce::Rectangle<float> tickBounds(4.0f, ((float)button.getHeight() - button.getHeight()) * 0.5f,
+                                          tickWidth, button.getHeight());
+        g.setColour(button.isEnabled() ? (button.getToggleState() ? juce::Colours::mediumseagreen : juce::Colours::grey)
+                                       : juce::Colours::grey);
+        g.fillRoundedRectangle(tickBounds, cornerSize);
+
+        g.setColour(button.findColour(juce::ToggleButton::textColourId));
+        g.setFont(fontSize);
+
+        g.drawFittedText(button.getButtonText(), tickBounds.toNearestInt(), juce::Justification::centred, 1);
+    }
+};
+
+class DemoAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                 public juce::Button::Listener,
+                                 public juce::Slider::Listener,
+                                 public juce::ComboBox::Listener
 {
 public:
     DemoAudioProcessorEditor(DemoAudioProcessor &);
@@ -52,7 +78,8 @@ private:
     DemoAudioProcessor &audioProcessor;
     int versionButtonClickedTimes = 0;
 
-    CustomLookAndFeel customLookAndFeel;
+    BorderlessButtonLookAndFeel borderlessButtonLookAndFeel;
+    ToggleButtonWithTextInsideLookAndFeel toggleButtonWithTextInsideLookAndFeel;
     juce::TextButton versionButton;
     juce::ComboBox logLevelComboBox;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> logLevelAttachment;

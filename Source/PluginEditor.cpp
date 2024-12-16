@@ -46,13 +46,7 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     versionButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
     versionButton.addListener(this);
     addAndMakeVisible(versionButton);
-    versionButton.setLookAndFeel(&customLookAndFeel);
-
-    bypassButton.setButtonText("Bypass");
-    bypassButton.addListener(this);
-    addAndMakeVisible(bypassButton);
-    bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.apvts, "bypassEnable", bypassButton);
+    versionButton.setLookAndFeel(&borderlessButtonLookAndFeel);
 
     // Initialize ComboBox but don't make it visible yet
     logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
@@ -72,6 +66,13 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     dataDumpButton.setVisible(false);
     dataDumpAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.apvts, "dataDumpEnable", dataDumpButton);
+
+    bypassButton.setButtonText("Bypass");
+    bypassButton.addListener(this);
+    addAndMakeVisible(bypassButton);
+    bypassButton.setLookAndFeel(&toggleButtonWithTextInsideLookAndFeel);
+    bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.apvts, "bypassEnable", bypassButton);
 
     gainSlider.setSliderStyle(juce::Slider::Rotary);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
@@ -104,6 +105,7 @@ DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
     dataDumpButton.removeListener(this);
 
     bypassButton.removeListener(this);
+    bypassButton.setLookAndFeel(nullptr);
     gainSlider.removeListener(this);
     LOG_MSG(LOG_INFO, "UI destroyed");
 }
@@ -121,21 +123,20 @@ void DemoAudioProcessorEditor::resized()
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     auto bounds = getLocalBounds().reduced(MARGIN);
-    gainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, UI_HEIGHT / 2 - SLIDER_HEIGHT, SLIDER_WIDTH, SLIDER_HEIGHT);
-    bypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, UI_HEIGHT / 2 + BUTTON_HEIGHT + MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT);
-    versionButton.setBounds(0, bypassButton.getY() + bypassButton.getHeight() + MARGIN * 4, BUTTON_WIDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, versionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
-    dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, versionButton.getY(), BUTTON_WIDTH, BUTTON_HEIGHT);
+    gainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, MARGIN, SLIDER_WIDTH, SLIDER_HEIGHT);
+    bypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, MARGIN * 2 + SLIDER_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT);
+
+    int bottom = UI_HEIGHT - BUTTON_HEIGHT - MARGIN;
+    versionButton.setBounds(MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
+    dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
 
     LOG_MSG(LOG_INFO, "UI resized");
 }
 
 void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
 {
-    if (button == &bypassButton) {
-        audioProcessor.setBypassState(!audioProcessor.getBypassState());
-        LOG_MSG(LOG_INFO, "Bypass is " + std::string(audioProcessor.getBypassState() ? "enabled" : "disabled"));
-    } else if (button == &versionButton) {
+    if (button == &versionButton) {
         versionButtonClickedTimes++;
         if (versionButtonClickedTimes == 5) {
             logLevelComboBox.setVisible(true);
@@ -146,8 +147,11 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
             dataDumpButton.setVisible(false);
         }
     } else if (button == &dataDumpButton) {
-        audioProcessor.setDataDumpEnable(dataDumpButton.getToggleState());
-        LOG_MSG(LOG_INFO, "Data dump is " + std::string(audioProcessor.getDataDumpEnable() ? "enabled" : "disabled"));
+        audioProcessor.setDataDumpState(dataDumpButton.getToggleState());
+        LOG_MSG(LOG_INFO, "Data dump is " + std::string(audioProcessor.getDataDumpState() ? "enabled" : "disabled"));
+    } else if (button == &bypassButton) {
+        audioProcessor.setBypassState(!audioProcessor.getBypassState());
+        LOG_MSG(LOG_INFO, "Bypass is " + std::string(audioProcessor.getBypassState() ? "enabled" : "disabled"));
     } else {
         // program should not reach here
         LOG_MSG(LOG_WARN, "Unknown button clicked");
