@@ -15,10 +15,12 @@
 */
 
 #include "PluginProcessor.h"
+#include "GapTimeThread.h"
 #include "PluginEditor.h"
 #include <JucePluginDefines.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define UNUSED(x) ((void)(x))
 
 //==============================================================================
 
@@ -138,10 +140,13 @@ DemoAudioProcessor::DemoAudioProcessor()
         LOG_MSG(LOG_ERROR, "Failed to algo_init");
         return;
     }
+    gapTimeThread.startThread();
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
 {
+    gapTimeThread.stopThread(1000);
+
     for (int i = 0; i < 2; i++) {
         if (write_buf[i] != nullptr) {
             free(write_buf[i]);
@@ -198,7 +203,7 @@ bool DemoAudioProcessor::isMidiEffect() const
     LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
     return true;
 #else
-    LOG_MSG(LOG_DEBUG, "isMidiEffect: false");
+    // LOG_MSG(LOG_OFF, "isMidiEffect: false");
     return false;
 #endif
 }
@@ -303,7 +308,8 @@ bool DemoAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) cons
     return true;
 #else
     // This is the place where you check if the layout is supported.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() &&
+        layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
         // This checks if the input layout matches the output layout
@@ -362,6 +368,14 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
             if (bypassEnable) {
                 // do nothing or copy the input buffer to the output buffer
             } else {
+                algoFrameCounter++;
+                LOG_MSG(LOG_DEBUG, "algoFrameCounter = " + std::to_string(algoFrameCounter));
+                int update_frame_num = 8;
+                if (algoFrameCounter % update_frame_num == 0) {
+                    gapTimeThread.setSleepTime(gapTime);
+                } else {
+                    gapTimeThread.setSleepTime(10);
+                }
                 for (int ch = 0; ch < valid_channels; ch++) {
                     int ret = algo_process(algo_handle, write_buf[ch], write_buf[ch], block_size);
                     if (ret != 0) {
@@ -397,8 +411,9 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     }
 
     clock_t stop = clock();
-    LOG_MSG(LOG_DEBUG, "processBlockCounter = " + std::to_string(processBlockCounter) +
-                           ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
+    UNUSED(stop - start);
+    // LOG_MSG(LOG_OFF, "processBlockCounter = " + std::to_string(processBlockCounter) +
+    //                        ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
 }
 
 //==============================================================================
@@ -465,11 +480,13 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 juce::AudioProcessorValueTreeState::ParameterLayout DemoAudioProcessor::createParameters()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout paramsLayout;
-    paramsLayout.add(std::make_unique<juce::AudioParameterChoice>("logLevel", "Log Level",
-                                                                 juce::StringArray{"DEBUG", "INFO", "WARN", "ERROR", "OFF"}, 1));
+    paramsLayout.add(std::make_unique<juce::AudioParameterChoice>(
+        "logLevel", "Log Level", juce::StringArray{"DEBUG", "INFO", "WARN", "ERROR", "OFF"}, 1));
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("dataDumpEnable", "Data Dump", false));
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("bypassEnable", "Bypass", false));
-    paramsLayout.add(std::make_unique<juce::AudioParameterFloat>("gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
+    paramsLayout.add(std::make_unique<juce::AudioParameterFloat>(
+        "gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
+    paramsLayout.add(std::make_unique<juce::AudioParameterInt>("gapTime", "Gap Time", 0, 200, 80));
     return paramsLayout;
 }
 

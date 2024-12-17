@@ -90,6 +90,8 @@ private:
     juce::Slider gainSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
     juce::Label gainLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gapTimeAttachment;
+    juce::Slider gapTimeSlider;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessorEditor)
 };

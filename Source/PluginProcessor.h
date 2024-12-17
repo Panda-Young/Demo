@@ -19,6 +19,7 @@
 #include "Logger.h"
 #include "Utils.h"
 #include <JuceHeader.h>
+#include "GapTimeThread.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,6 +86,8 @@ public:
     void setGainValue(float value) { gain = value; };
     float getGainValue() const { return gain; };
     void *getAlgoHandle() const { return algo_handle; };
+    int getGapTime() const { return gapTime; };
+    void setGapTime(int time) { gapTime = time; };
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameters() };
@@ -115,6 +118,9 @@ private:
 
     double originalSampleRate = 0;
     int originalChannels = 0;
+    int gapTime = 80;
+
+    GapTimeThread gapTimeThread;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)
 };

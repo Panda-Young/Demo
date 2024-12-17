@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="ndQYFm" name="Demo" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginFormats="buildVST,buildVST3"
-              version="2.1.3" projectLineFeed="&#13;&#10;" pluginManufacturer="Panda"
+              version="2.1.5" projectLineFeed="&#13;&#10;" pluginManufacturer="Panda"
               companyName="Panda">
   <MAINGROUP id="A3A7Ql" name="Demo">
     <GROUP id="{553DCF37-AEB0-4548-5A47-D63C9DB6E300}" name="Source">
@@ -12,6 +12,7 @@
         <FILE id="Vp5xsJ" name="gain_control.c" compile="1" resource="0" file="Source/lib/gain_control.c"/>
         <FILE id="AkePME" name="gain_control.h" compile="0" resource="0" file="Source/lib/gain_control.h"/>
       </GROUP>
+      <FILE id="X3f0ZF" name="GapTimeThread.h" compile="0" resource="0" file="Source/GapTimeThread.h"/>
       <FILE id="O4xjea" name="Logger.cpp" compile="1" resource="0" file="Source/Logger.cpp"/>
       <FILE id="moCRBc" name="Logger.h" compile="0" resource="0" file="Source/Logger.h"/>
       <FILE id="CjPKdB" name="PluginProcessor.cpp" compile="1" resource="0"

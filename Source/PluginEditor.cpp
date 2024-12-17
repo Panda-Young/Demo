@@ -86,6 +86,13 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     gainLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(&gainLabel);
 
+    gapTimeSlider.setSliderStyle(juce::Slider::LinearBar);
+    gapTimeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
+    gapTimeSlider.addListener(this);
+    addAndMakeVisible(gapTimeSlider);
+    gapTimeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.apvts, "gapTime", gapTimeSlider);
+
     setSize(UI_WIDTH, UI_HEIGHT);
     if (audioProcessor.getUsedPluginType() == 3 &&
         audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
@@ -107,6 +114,7 @@ DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
     bypassButton.removeListener(this);
     bypassButton.setLookAndFeel(nullptr);
     gainSlider.removeListener(this);
+    gapTimeSlider.removeListener(this);
     LOG_MSG(LOG_INFO, "UI destroyed");
 }
 
@@ -125,6 +133,7 @@ void DemoAudioProcessorEditor::resized()
     auto bounds = getLocalBounds().reduced(MARGIN);
     gainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, MARGIN, SLIDER_WIDTH, SLIDER_HEIGHT);
     bypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, MARGIN * 2 + SLIDER_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT);
+    gapTimeSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, MARGIN * 3 + SLIDER_HEIGHT + BUTTON_HEIGHT, SLIDER_WIDTH, BUTTON_HEIGHT);
 
     int bottom = UI_HEIGHT - BUTTON_HEIGHT - MARGIN;
     versionButton.setBounds(MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
@@ -169,6 +178,12 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
         if (ret != E_OK) {
             LOG_MSG(LOG_ERROR, "algo_set_param failed. ret = " + std::to_string(ret));
         }
+    } else if (slider == &gapTimeSlider) {
+        audioProcessor.setGapTime(gapTimeSlider.getValue());
+        LOG_MSG(LOG_INFO, "Gap time has been set to " + std::to_string(audioProcessor.getGapTime()) + " ms");
+    } else {
+        // program should not reach here
+        LOG_MSG(LOG_WARN, "Unknown slider value changed");
     }
     audioProcessor.setAnyParamChanged(true);
 }
