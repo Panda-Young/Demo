@@ -19,8 +19,8 @@
 #include <JucePluginDefines.h>
 #include <Windows.h>
 
-#define UI_WIDTH 400
-#define UI_HEIGHT 300
+#define EDITOR_WIDTH 400
+#define EDITOR_HEIGHT 300
 
 #define MARGIN 10
 
@@ -93,12 +93,12 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     gapTimeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, "gapTime", gapTimeSlider);
 
-    setSize(UI_WIDTH, UI_HEIGHT);
+    setSize(EDITOR_WIDTH, EDITOR_HEIGHT);
     if (audioProcessor.getUsedPluginType() == 3 &&
         audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
         audioProcessor.getUsedHostAppVersion() >= 0 && audioProcessor.getUsedHostAppVersion() <= 2020) {
         float scaleFactor = GetDpiForSystem() / 96.0f; // DPI scaling for Windows
-        setSize(UI_WIDTH * scaleFactor, UI_HEIGHT * scaleFactor);
+        setSize(EDITOR_WIDTH * scaleFactor, EDITOR_HEIGHT * scaleFactor);
     }
 
     LOG_MSG(LOG_INFO, "UI initialized");
@@ -131,14 +131,14 @@ void DemoAudioProcessorEditor::resized()
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     auto bounds = getLocalBounds().reduced(MARGIN);
-    gainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, MARGIN, SLIDER_WIDTH, SLIDER_HEIGHT);
-    bypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, MARGIN * 2 + SLIDER_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT);
-    gapTimeSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, MARGIN * 3 + SLIDER_HEIGHT + BUTTON_HEIGHT, SLIDER_WIDTH, BUTTON_HEIGHT);
+    gainSlider.setBounds((EDITOR_WIDTH - SLIDER_WIDTH) / 2, MARGIN, SLIDER_WIDTH, SLIDER_HEIGHT);
+    bypassButton.setBounds((EDITOR_WIDTH - BUTTON_WIDTH) / 2, MARGIN * 2 + SLIDER_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT);
+    gapTimeSlider.setBounds((EDITOR_WIDTH - SLIDER_WIDTH) / 2, MARGIN * 3 + SLIDER_HEIGHT + BUTTON_HEIGHT, SLIDER_WIDTH, BUTTON_HEIGHT);
 
-    int bottom = UI_HEIGHT - BUTTON_HEIGHT - MARGIN;
+    int bottom = EDITOR_HEIGHT - BUTTON_HEIGHT - MARGIN;
     versionButton.setBounds(MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
-    dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((EDITOR_WIDTH - BUTTON_WIDTH) / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
+    dataDumpButton.setBounds(EDITOR_WIDTH - BUTTON_WIDTH - MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
 
     LOG_MSG(LOG_INFO, "UI resized");
 }
