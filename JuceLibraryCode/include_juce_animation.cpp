@@ -5,4 +5,5 @@
 
 */
 
+#include "AppConfig.h"
 #include <juce_animation/juce_animation.cpp>

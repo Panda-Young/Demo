@@ -25,7 +25,7 @@ if not "%~1"=="" (
 set copy_vst2=1
 set copy_vst3=1
 
-set VS_version=VisualStudio2017
+set VS_version=VisualStudio2022
 
 set build_type=Debug
 
@@ -33,7 +33,7 @@ if "%build_type%" NEQ "Debug" (
     set build_type=Release
 )
 
-set APP_INSTALL_DIR=D:\Program Files
+set APP_INSTALL_DIR=C:\Program Files
 
 @REM set host_program_name="Adobe Audition.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\Adobe\Adobe Audition 2020\Adobe Audition.exe"

@@ -6,26 +6,25 @@
  * Copyright (c) 2024 by Panda-Young, All Rights Reserved.
  **************************************************************************/
 
-#include "Utils.h"
-#include "Logger.h"
-#include <JucePluginDefines.h>                   // Include this header for JucePlugin_Name
-#include <chrono>                                // Include this header for std::chrono
-#include <ctime>                                 // Include this header for std::time_t, std::tm, std::localtime, std::mktime
-#include <fstream>                               // Include this header for std::ofstream, std::ifstream
-#include <intrin.h>                              // Include this header for __cpuid
-#include <iomanip>                               // Include this header for std::put_time
-#include <juce_cryptography/juce_cryptography.h> // Include this header for MD5
-#include <regex>                                 // Include this header for std::regex, std::smatch
-#include <sstream>                               // Include this header for std::ostringstream, std::istringstream
-#include <windows.h>
+#include "myUtils.h"
+#include "myLogger.h"
+#include <JucePluginDefines.h>                   // Include this for JucePlugin_Name
+#include <chrono>                                // Include this for std::chrono
+#include <ctime>                                 // Include this for std::time_t, std::tm, std::localtime, std::mktime
+#include <fstream>                               // Include this for std::ofstream, std::ifstream
+#include <iomanip>                               // Include this for std::put_time
+#include <juce_cryptography/juce_cryptography.h> // Include this for MD5
+#include <regex>                                 // Include this for std::regex, std::smatch
+#include <sstream>                               // Include this for std::ostringstream, std::istringstream
 
 int getPluginType()
 {
     juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
     LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
-    auto pos = dllPath.getFullPathName().toStdString().rfind('.');
+    std::string path(dllPath.getFullPathName().toStdString());
+    auto pos = path.rfind('.');
     if (pos != std::string::npos) {
-        auto extension = dllPath.getFullPathName().toStdString().substr(pos);
+        auto extension = path.substr(pos);
         if (extension == ".dll") {
             return 2;
         } else if (extension == ".vst3") {
@@ -35,34 +34,25 @@ int getPluginType()
     return -1;
 }
 
-std::string extractHostAppName()
+std::string getHostAppName()
 {
-    char hostAppPath[1024] = {0};
-    GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
-    LOG_MSG_CF(LOG_INFO, "hostAppPath= \"%s\"", hostAppPath);
-    std::string path(hostAppPath);
-    auto pos = path.find_last_of('\\');
-    std::string tempHostAppName = (pos != std::string::npos) ? path.substr(pos + 1) : path;
-
-    pos = tempHostAppName.find(".exe");
-    if (pos != std::string::npos) {
-        tempHostAppName = tempHostAppName.substr(0, pos);
-    }
-
+    juce::File hostAppFile = juce::File::getSpecialLocation(juce::File::hostApplicationPath);
+    std::string tempHostAppName = hostAppFile.getFileNameWithoutExtension().toStdString();
+    LOG_MSG(LOG_INFO, "hostAppPath = \"" + hostAppFile.getFullPathName().toStdString() + "\"");
     return tempHostAppName;
 }
 
 int getAuditionVersion()
 {
-    char hostAppPath[1024] = {0};
-    GetModuleFileNameA(NULL, hostAppPath, sizeof(hostAppPath));
-    std::string path(hostAppPath);
+    juce::File hostAppFile = juce::File::getSpecialLocation(juce::File::hostApplicationPath);
+    std::string hostAppPath = hostAppFile.getFullPathName().toStdString();
+
     std::regex versionRegex(R"(Adobe Audition (\d+))");
     std::smatch matches;
-    if (std::regex_search(path, matches, versionRegex) && matches.size() > 1) {
+    if (std::regex_search(hostAppPath, matches, versionRegex) && matches.size() > 1) {
         return std::stoi(matches[1]);
     }
-    if (path.find("Audition") != std::string::npos) {
+    if (hostAppPath.find("Audition") != std::string::npos) {
         return 0;
     }
     return -1;
@@ -116,6 +106,11 @@ void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float> &bu
         for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
             outFile.write(reinterpret_cast<const char *>(&buffer.getReadPointer(channel)[i]), sizeof(float));
         }
+    }
+    outFile.close();
+    if (!outFile) {
+        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + pcmFile.getFullPathName().toStdString() +
+                               ". Reason: " + std::string(strerror(errno)));
     }
 }
 
@@ -192,259 +187,26 @@ void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t S
     }
 }
 
-std::string encryptDate(const std::string &date)
-{
-    std::string encrypted = date;
-    const std::string key = "Demo";
-    for (size_t i = 0; i < date.size(); ++i) {
-        encrypted[i] ^= key[i % key.size()];
-    }
-    return encrypted;
-}
-
-std::string decryptDate(const std::string &encryptedDate)
-{
-    return encryptDate(encryptedDate);
-}
-
-std::string getCurrentDateString()
-{
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-    std::tm now_tm = *std::localtime(&now_time);
-    std::ostringstream oss;
-    oss << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
-    return oss.str();
-}
-
-std::string getFileCreationDate(const juce::File &file)
-{
-    auto creationTime = file.getCreationTime();
-    std::time_t creation_time_t = creationTime.toMilliseconds() / 1000;
-    std::tm creation_tm = *std::localtime(&creation_time_t);
-    std::ostringstream oss;
-    oss << std::put_time(&creation_tm, "%Y-%m-%d %H:%M:%S");
-    return oss.str();
-}
-
-bool checkLicenseFile(const juce::File &licenseFile,
-                      uint32_t nYear, uint32_t nMonth, uint32_t nDay,
-                      uint32_t nHour, uint32_t nMinute, uint32_t nSecond)
-{
-    if (!licenseFile.existsAsFile()) {
-        std::ofstream outFile(licenseFile.getFullPathName().toStdString());
-        std::string currentDate = getCurrentDateString();
-        std::string encryptedDate = encryptDate(currentDate);
-        outFile << encryptedDate;
-        outFile.close();
-
-        // Modify the file creation time: This is necessary because even if the file is deleted and recreated,
-        // the file system might retain the original creation time.
-        HANDLE hFile = CreateFileW(licenseFile.getFullPathName().toWideCharPointer(),
-                                   GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (hFile != INVALID_HANDLE_VALUE) {
-            SYSTEMTIME st;
-            FILETIME ft;
-
-            // Convert currentDate to std::tm structure
-            std::istringstream iss(currentDate);
-            std::tm current_tm;
-            iss >> std::get_time(&current_tm, "%Y-%m-%d %H:%M:%S");
-
-            // Convert std::tm to time_t
-            std::time_t current_time_t = std::mktime(&current_tm);
-
-            // Convert time_t to UTC time
-            std::tm *utc_tm = std::gmtime(&current_time_t);
-
-            // Set SYSTEMTIME structure
-            st.wYear = utc_tm->tm_year + 1900;
-            st.wMonth = utc_tm->tm_mon + 1;
-            st.wDay = utc_tm->tm_mday;
-            st.wHour = utc_tm->tm_hour;
-            st.wMinute = utc_tm->tm_min;
-            st.wSecond = utc_tm->tm_sec;
-            st.wMilliseconds = 0;
-
-            // Convert SYSTEMTIME to FILETIME
-            SystemTimeToFileTime(&st, &ft);
-
-            // Set the file creation time
-            SetFileTime(hFile, &ft, NULL, NULL);
-            CloseHandle(hFile);
-        }
-
-        return true;
-    } else {
-        std::ifstream inFile(licenseFile.getFullPathName().toStdString());
-        std::string encryptedDate;
-        std::getline(inFile, encryptedDate);
-        inFile.close();
-        std::string decryptedDate = decryptDate(encryptedDate);
-        std::string fileCreationDate = getFileCreationDate(licenseFile);
-
-        if (decryptedDate != fileCreationDate) {
-            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-                                                   "License Error",
-                                                   "License file is corrupted or tampered.");
-            return false;
-        }
-
-        auto now = std::chrono::system_clock::now();
-        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-        std::tm now_tm = *std::localtime(&now_time);
-        std::istringstream iss(decryptedDate);
-        std::tm creation_tm;
-        iss >> std::get_time(&creation_tm, "%Y-%m-%d %H:%M:%S");
-        auto creation_time = std::chrono::system_clock::from_time_t(std::mktime(&creation_tm));
-
-        // Calculate the expiration duration in seconds
-        auto expiration_duration = std::chrono::seconds(nYear * 365 * 24 * 3600 +
-                                                        nMonth * 30 * 24 * 3600 +
-                                                        nDay * 24 * 3600 +
-                                                        nHour * 3600 + nMinute * 60 + nSecond);
-
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - creation_time);
-
-        if (duration > expiration_duration) {
-            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-                                                   "License Expired",
-                                                   "Your license has expired.");
-            return false;
-        }
-
-        // Calculate remaining time
-        auto remaining_time = expiration_duration - duration;
-        auto remaining_days = std::chrono::duration_cast<std::chrono::hours>(remaining_time).count() / 24;
-
-        // If remaining time is less than 7 days, show a warning message
-        if (remaining_days < 7) {
-            auto expiration_time = creation_time + expiration_duration;
-            std::time_t expiration_time_t = std::chrono::system_clock::to_time_t(expiration_time);
-            std::tm expiration_tm = *std::localtime(&expiration_time_t);
-            std::ostringstream oss;
-            oss << std::put_time(&expiration_tm, "%Y-%m-%d %H:%M:%S");
-            std::string expiration_str = oss.str();
-
-            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-                                                   "License Warning",
-                                                   "Your license will expire on " + expiration_str);
-        }
-    }
-    return true;
-}
-
-BOOL GetCpuByCmd(char *lpszCpu, int len = 128)
-{
-    const long MAX_COMMAND_SIZE = 10000;           // Command line output buffer size
-    char szFetCmd[] = "wmic cpu get processorid";  // Command line to get CPU serial number
-    const std::string strEnSearch = "ProcessorId"; // Leading information of the CPU serial number
-
-    BOOL bret = FALSE;
-    HANDLE hReadPipe = NULL;  // Read pipe
-    HANDLE hWritePipe = NULL; // Write pipe
-    PROCESS_INFORMATION pi;   // Process information
-    STARTUPINFO si;           // Control command line window information
-    SECURITY_ATTRIBUTES sa;   // Security attributes
-
-    char szBuffer[MAX_COMMAND_SIZE + 1] = {0}; // Output buffer for command line results
-    std::string strBuffer;
-    unsigned long count = 0;
-    long ipos = 0;
-
-    memset(&pi, 0, sizeof(pi));
-    memset(&si, 0, sizeof(si));
-    memset(&sa, 0, sizeof(sa));
-
-    pi.hProcess = NULL;
-    pi.hThread = NULL;
-    si.cb = sizeof(STARTUPINFO);
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.lpSecurityDescriptor = NULL;
-    sa.bInheritHandle = TRUE;
-
-    // 1.0 Create pipe
-    bret = CreatePipe(&hReadPipe, &hWritePipe, &sa, 0);
-    if (!bret) {
-        goto END;
-    }
-
-    // 2.0 Set the command line window information to the specified read and write pipes
-    GetStartupInfo(&si);
-    si.hStdError = hWritePipe;
-    si.hStdOutput = hWritePipe;
-    si.wShowWindow = SW_HIDE; // Hide the command line window
-    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
-
-    // 3.0 Create a process to get the command line
-    bret = CreateProcess(NULL, szFetCmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
-    if (!bret) {
-        goto END;
-    }
-
-    // 4.0 Read the returned data
-    WaitForSingleObject(pi.hProcess, 500 /*INFINITE*/);
-    bret = ReadFile(hReadPipe, szBuffer, MAX_COMMAND_SIZE, &count, 0);
-    if (!bret) {
-        goto END;
-    }
-
-    // 5.0 Find the CPU serial number
-    bret = FALSE;
-    strBuffer = szBuffer;
-    ipos = strBuffer.find(strEnSearch);
-
-    if (ipos < 0) // Not found
-    {
-        goto END;
-    } else {
-        strBuffer = strBuffer.substr(ipos + strEnSearch.length());
-    }
-
-    memset(szBuffer, 0x00, sizeof(szBuffer));
-    strcpy_s(szBuffer, strBuffer.c_str());
-
-    // Remove spaces, \r, \n
-    {
-        int j = 0;
-        for (int i = 0; i < strlen(szBuffer); i++) {
-            if (szBuffer[i] != ' ' && szBuffer[i] != '\n' && szBuffer[i] != '\r') {
-                lpszCpu[j] = szBuffer[i];
-                j++;
-            }
-        }
-        lpszCpu[j] = '\0'; // Ensure the string is null-terminated
-    }
-
-    bret = TRUE;
-
-END:
-    // Close all handles
-    CloseHandle(hWritePipe);
-    CloseHandle(hReadPipe);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
-    return bret;
-}
-
-juce::String getHardDriveSerialNumber()
-{
-    DWORD serialNumber = 0;
-    if (GetVolumeInformationW(L"C:\\", NULL, 0, &serialNumber, NULL, NULL, NULL, 0)) {
-        return juce::String::toHexString((int)serialNumber).toUpperCase();
-    }
-    return "Unknown";
-}
-
 juce::String getSerial()
 {
-    char cpuid[64] = {0};
-    if (!GetCpuByCmd(cpuid, 64)) {
-        LOG_MSG(LOG_ERROR, "Failed to get CPU ID.");
+    std::string cpuID = "";
+    if (!get_cpu_id(cpuID)) {
+        LOG_MSG(LOG_WARN, "Failed to get CPU ID.");
     }
-    juce::String cpuId(cpuid);
-    juce::String diskId = getHardDriveSerialNumber();
+    if (cpuID.length() < 16) {
+        cpuID = "0000000000000000";
+    }
+
+    std::string diskID = "";
+    if (!get_disk_id(diskID)) {
+        LOG_MSG(LOG_WARN, "Failed to get disk ID.");
+    }
+    if (diskID.length() < 8) {
+        diskID = "00000000";
+    }
+
+    juce::String cpuId(cpuID.c_str());
+    juce::String diskId(diskID.c_str());
     juce::String serial = cpuId.substring(0, 2) + diskId.substring(0, 1) + "-" +
                           cpuId.substring(2, 4) + diskId.substring(1, 2) + "-" +
                           cpuId.substring(4, 6) + diskId.substring(2, 3) + "-" +
@@ -525,12 +287,17 @@ juce::String reverseHashStringFormat(const juce::String &formattedHash, RegType_
     return originalHash;
 }
 
-bool isLicenseValid(const juce::String &license)
+bool isLicenseTimeValid(const juce::String &license)
 {
     juce::String dateString;
-    dateString += license.substring(4, 6);   // MM
-    dateString += license.substring(12, 14); // DD
-    dateString += license.substring(20, 24); // YYYY
+    dateString += license.substring(4, 5);
+    dateString += license.substring(10, 11);
+    dateString += license.substring(16, 17);
+    dateString += license.substring(22, 23);
+    dateString += license.substring(28, 29);
+    dateString += license.substring(34, 35);
+    dateString += license.substring(40, 41);
+    dateString += license.substring(46, 47);
 
     char dateStr[9] = {0};
     for (int i = 0; i < 8; i++) {
@@ -541,13 +308,12 @@ bool isLicenseValid(const juce::String &license)
     std::istringstream ss(dateStr);
     ss >> std::get_time(&licenseDate, "%m%d%Y");
 
-    std::time_t t = std::time(nullptr);
-    std::tm *now = std::localtime(&t);
+    std::ostringstream oss;
+    oss << std::put_time(&licenseDate, "%m/%d/%Y");
 
-    std::time_t licenseTime = std::mktime(&licenseDate);
-    std::time_t currentTime = std::mktime(now);
-
-    return difftime(licenseTime, currentTime) >= 0;
+    juce::Time currentTime = juce::Time::getCurrentTime();
+    juce::Time licenseTime(licenseDate.tm_year + 1900, licenseDate.tm_mon, licenseDate.tm_mday, 0, 0);
+    return licenseTime >= currentTime;
 }
 
 RegType_t checkRegType()
@@ -556,7 +322,7 @@ RegType_t checkRegType()
     char licenseFileName[64] = JucePlugin_Name;
     strcat(licenseFileName, "_VST_Plugin.lic");
     licenseFileName[strlen(licenseFileName)] = '\0';
-    juce::File file(licenseDir.getFullPathName() + "\\" + licenseFileName);
+    juce::File file = licenseDir.getChildFile(licenseFileName);
     juce::File currentExecutable = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
     juce::File tempLicense(currentExecutable.getParentDirectory().getChildFile(licenseFileName));
 
@@ -575,11 +341,11 @@ RegType_t checkRegType()
                 }
             } else if (strLicense.length() == 47) {
                 if (reverseHashStringFormat(strLicense, UserReg) == getRegSequence(StrSerial, UserReg)) {
-                    if (isLicenseValid(strLicense)) {
+                    if (isLicenseTimeValid(strLicense)) {
                         LOG_MSG(LOG_INFO, "User license is valid.");
                         return UserReg;
                     } else {
-                        LOG_MSG(LOG_INFO, "User license is invalid.");
+                        LOG_MSG(LOG_INFO, "User license time expired.");
                         return NoReg;
                     }
                 } else {
@@ -594,24 +360,25 @@ RegType_t checkRegType()
             LOG_MSG(LOG_ERROR, "Failed to open license file.");
             return NoReg;
         }
-    } else if (tempLicense.exists()) {
-        LOG_MSG(LOG_INFO, "Temp license file exists.");
-        juce::FileInputStream input(tempLicense);
-        if (input.openedOk()) {
-            juce::String strLicense = input.readNextLine().trim();
-            if (isLicenseValid(strLicense)) {
-                LOG_MSG(LOG_INFO, "Temp license is valid.");
-                return UserReg;
+    } else {
+        if (tempLicense.exists()) {
+            LOG_MSG(LOG_INFO, "Temp license file exists.");
+            juce::FileInputStream input(tempLicense);
+            if (input.openedOk()) {
+                juce::String strLicense = input.readNextLine().trim();
+                if (isLicenseTimeValid(strLicense)) {
+                    LOG_MSG(LOG_INFO, "Temp license is valid.");
+                    return UserReg;
+                } else {
+                    LOG_MSG(LOG_INFO, "Temp license time expired.");
+                    return NoReg;
+                }
             } else {
-                LOG_MSG(LOG_INFO, "Temp license is invalid.");
+                LOG_MSG(LOG_ERROR, "Failed to open temp license file.");
                 return NoReg;
             }
-        } else {
-            LOG_MSG(LOG_ERROR, "Failed to open temp license file.");
-            return NoReg;
         }
-    } else {
-        LOG_MSG(LOG_INFO, "License file does not exist.");
+        LOG_MSG(LOG_INFO, "License file: " + file.getFullPathName().toStdString() + " does not exist.");
         return NoReg;
     }
 }
@@ -625,7 +392,7 @@ RegType_t regSoftware(juce::String strLicense)
     }
     char licenseFileName[64] = JucePlugin_Name;
     strcat(licenseFileName, "_VST_Plugin.lic");
-    juce::String filePath = licenseDir.getFullPathName() + "/" + licenseFileName;
+    juce::String filePath = licenseDir.getFullPathName() + juce::String("/") + juce::String(licenseFileName);
     strLicense = strLicense.trim();
     if (strLicense.length() == 39) {
         if (strLicense == hashStringFormat(getRegSequence(StrSerial, VIPReg), VIPReg)) {
@@ -634,26 +401,42 @@ RegType_t regSoftware(juce::String strLicense)
             out.setPosition(0);
             out.write(strLicense.getCharPointer(), strLicense.length());
             out.flush();
-            return VIPReg;
+            if (file.exists()) {
+                LOG_MSG(LOG_INFO, "Write VIP license to file: " + file.getFullPathName().toStdString());
+                return VIPReg;
+            } else {
+                LOG_MSG(LOG_ERROR, "Failed to write VIP license to file.");
+                return NoReg;
+            }
         } else {
+            LOG_MSG(LOG_ERROR, "VIP License is invalid.");
             return NoReg;
         }
     } else if (strLicense.length() == 47) {
         if (reverseHashStringFormat(strLicense, UserReg) == getRegSequence(StrSerial, UserReg)) {
-            if (isLicenseValid(strLicense)) {
+            if (isLicenseTimeValid(strLicense)) {
                 juce::File file(filePath);
                 juce::FileOutputStream out(file);
                 out.setPosition(0);
                 out.write(strLicense.getCharPointer(), strLicense.length());
                 out.flush();
-                return UserReg;
+                if (file.exists()) {
+                    LOG_MSG(LOG_INFO, "Write User license to file: " + file.getFullPathName().toStdString());
+                    return UserReg;
+                } else {
+                    LOG_MSG(LOG_ERROR, "Failed to write User license to file.");
+                    return NoReg;
+                }
             } else {
+                LOG_MSG(LOG_ERROR, "User license time expired.");
                 return NoReg;
             }
         } else {
+            LOG_MSG(LOG_ERROR, "User license is invalid.");
             return NoReg;
         }
     } else {
+        LOG_MSG_CF(LOG_ERROR, "license is invalid length: %d", strLicense.length());
         return NoReg;
     }
 }

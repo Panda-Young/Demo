@@ -5,4 +5,5 @@
 
 */
 
+#include "AppConfig.h"
 #include <juce_analytics/juce_analytics.cpp>

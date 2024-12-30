@@ -1,5 +1,5 @@
 /***************************************************************************
- * Description: Logger
+ * Description: myLogger
  * version: 0.1.0
  * Author: Panda-Young
  * Date: 2024-07-20 01:29:20
@@ -30,12 +30,12 @@ typedef enum LogLevel {
 #include <mutex>
 #include <string>
 
-class Logger
+class myLogger
 {
 public:
-    static Logger &getInstance()
+    static myLogger &getInstance()
     {
-        static Logger instance;
+        static myLogger instance;
         return instance;
     }
 
@@ -43,10 +43,10 @@ public:
     void setLogLevel(LogLevel level);
 
 private:
-    Logger();
-    ~Logger();
-    Logger(const Logger &) = delete;
-    Logger &operator=(const Logger &) = delete;
+    myLogger();
+    ~myLogger();
+    myLogger(const myLogger &) = delete;
+    myLogger &operator=(const myLogger &) = delete;
 
     void initializeLogger();
 
@@ -67,7 +67,7 @@ extern "C" {
 
 #define LOG_MSG_CF(level, format, ...)                                         \
     do {                                                                       \
-        char _log_temp_buf[256] = {0};                                         \
+        char _log_temp_buf[2048] = {0};                                        \
         snprintf(_log_temp_buf, sizeof(_log_temp_buf), format, ##__VA_ARGS__); \
         LOG_MSG_C(level, _log_temp_buf);                                       \
     } while (0)

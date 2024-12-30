@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "Logger.h"
-#include "Utils.h"
+#include "myLogger.h"
+#include "myUtils.h"
 #include <JuceHeader.h>
 
 #ifdef __cplusplus
@@ -72,26 +72,29 @@ public:
     void setStateInformation(const void *data, int sizeInBytes) override;
 
     //==============================================================================
-    int getUsedPluginType() { return pluginType; }
-    std::string getUsedHostAppName() { return hostAppName; }
-    int getUsedHostAppVersion() { return hostAppVersion; }
-    void setAnyParamChanged(bool state) { anyParamChanged = state; };
-    bool getAnyParamChanged() const { return anyParamChanged; };
-    void setDataDumpState(bool state) { dataDumpEnable = state; };
-    bool getDataDumpState() const { return dataDumpEnable; };
+    int getUsedPluginType() const { return pluginType; }
+    const std::string &getUsedHostAppName() const { return hostAppName; }
+    int getUsedHostAppVersion() const { return hostAppVersion; }
+    void setAnyParamChanged(bool state) { anyParamChanged = state; }
+    bool getAnyParamChanged() const { return anyParamChanged; }
+    void setDataDumpState(bool state) { dataDumpEnable = state; }
+    bool getDataDumpState() const { return dataDumpEnable; }
 
-    void setBypassState(bool state) { bypassEnable = state; };
-    bool getBypassState() const { return bypassEnable; };
-    void setGainValue(float value) { gain = value; };
-    float getGainValue() const { return gain; };
-    void *getAlgoHandle() const { return algo_handle; };
+    void initializeBuffers();
 
+    void setBypassState(bool state) { bypassEnable = state; }
+    bool getBypassState() const { return bypassEnable; }
+    void setGainValue(float value) { gain = value; }
+    float getGainValue() const { return gain; }
+    void *getAlgoHandle() const { return algo_handle; }
+
+    juce::AudioProcessorValueTreeState &getApvts() { return apvts; }
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
-    juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameters() };
-    Logger& logger = Logger::getInstance();
+    myLogger &logger = myLogger::getInstance();
 
 private:
     //==============================================================================
+    juce::AudioProcessorValueTreeState apvts{*this, nullptr, "Parameters", createParameters()};
     int pluginType = -1;
     std::string hostAppName = "";
     int hostAppVersion = -1;
@@ -99,6 +102,7 @@ private:
     bool anyParamChanged = false;
     bool dataDumpEnable = false;
     bool isLicenseValid = false;
+    bool isInitDone = false;
 
     uint64_t processBlockCounter = 0;
     uint64_t algoFrameCounter = 0;
@@ -107,8 +111,8 @@ private:
     void *algo_handle = nullptr;
     float gain = 0.0f;
 
-    float *write_buf[MAX_SUPPORT_CHANNELS] = {0};
-    float *read_buf[MAX_SUPPORT_CHANNELS] = {0};
+    std::unique_ptr<float[]> write_buf[MAX_SUPPORT_CHANNELS];
+    std::unique_ptr<float[]> read_buf[MAX_SUPPORT_CHANNELS];
     int write_index = 0;
     int read_index = 0;
     juce::File dataDumpDir, processedDataDumpFile;

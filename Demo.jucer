@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="ndQYFm" name="Demo" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginFormats="buildVST,buildVST3"
-              version="2.1.3" projectLineFeed="&#13;&#10;" pluginManufacturer="Panda"
+<JUCERPROJECT id="ndQYFm" name="Demo" projectType="audioplug" useAppConfig="1"
+              addUsingNamespaceToJuceHeader="1" jucerFormatVersion="1" pluginFormats="buildVST,buildVST3"
+              version="2.1.4" projectLineFeed="&#13;&#10;" pluginManufacturer="Panda"
               companyName="Panda">
   <MAINGROUP id="A3A7Ql" name="Demo">
     <GROUP id="{553DCF37-AEB0-4548-5A47-D63C9DB6E300}" name="Source">
@@ -12,8 +12,10 @@
         <FILE id="Vp5xsJ" name="gain_control.c" compile="1" resource="0" file="Source/lib/gain_control.c"/>
         <FILE id="AkePME" name="gain_control.h" compile="0" resource="0" file="Source/lib/gain_control.h"/>
       </GROUP>
-      <FILE id="O4xjea" name="Logger.cpp" compile="1" resource="0" file="Source/Logger.cpp"/>
-      <FILE id="moCRBc" name="Logger.h" compile="0" resource="0" file="Source/Logger.h"/>
+      <FILE id="yWp9FH" name="machine_serialnum.cpp" compile="1" resource="0"
+            file="Source/machine_serialnum.cpp"/>
+      <FILE id="r2tjqf" name="myLogger.cpp" compile="1" resource="0" file="Source/myLogger.cpp"/>
+      <FILE id="Hy2pbj" name="myLogger.h" compile="0" resource="0" file="Source/myLogger.h"/>
       <FILE id="CjPKdB" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="VGWsm1" name="PluginProcessor.h" compile="0" resource="0"
@@ -21,8 +23,8 @@
       <FILE id="KPkUBX" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="bTwWTX" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
-      <FILE id="dMgx4b" name="Utils.cpp" compile="1" resource="0" file="Source/Utils.cpp"/>
-      <FILE id="uathmf" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
+      <FILE id="dMgx4b" name="myUtils.cpp" compile="1" resource="0" file="Source/myUtils.cpp"/>
+      <FILE id="uathmf" name="myUtils.h" compile="0" resource="0" file="Source/myUtils.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>
@@ -111,5 +113,33 @@
         <MODULEPATH id="juce_product_unlocking" path="D:\Installation\JUCE\modules"/>
       </MODULEPATHS>
     </VS2017>
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" headerPath="../../Source/lib"/>
+        <CONFIGURATION isDebug="0" name="Release" headerPath="../../Source/lib"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_analytics" path="../../juce"/>
+        <MODULEPATH id="juce_animation" path="../../juce"/>
+        <MODULEPATH id="juce_audio_basics" path="../../juce"/>
+        <MODULEPATH id="juce_audio_devices" path="../../juce"/>
+        <MODULEPATH id="juce_audio_formats" path="../../juce"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../../juce"/>
+        <MODULEPATH id="juce_audio_processors" path="../../juce"/>
+        <MODULEPATH id="juce_audio_utils" path="../../juce"/>
+        <MODULEPATH id="juce_box2d" path="../../juce"/>
+        <MODULEPATH id="juce_core" path="../../juce"/>
+        <MODULEPATH id="juce_cryptography" path="../../juce"/>
+        <MODULEPATH id="juce_data_structures" path="../../juce"/>
+        <MODULEPATH id="juce_dsp" path="../../juce"/>
+        <MODULEPATH id="juce_events" path="../../juce"/>
+        <MODULEPATH id="juce_graphics" path="../../juce"/>
+        <MODULEPATH id="juce_gui_basics" path="../../juce"/>
+        <MODULEPATH id="juce_gui_extra" path="../../juce"/>
+        <MODULEPATH id="juce_opengl" path="../../juce"/>
+        <MODULEPATH id="juce_osc" path="../../juce"/>
+        <MODULEPATH id="juce_product_unlocking" path="../../juce"/>
+      </MODULEPATHS>
+    </LINUX_MAKE>
   </EXPORTFORMATS>
 </JUCERPROJECT>

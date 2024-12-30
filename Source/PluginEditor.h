@@ -71,6 +71,7 @@ public:
     void buttonClicked(juce::Button *button) override;
     void comboBoxChanged(juce::ComboBox *comboBox) override;
     void sliderValueChanged(juce::Slider *slider) override;
+    void initializeUIComponents();
 
 private:
     // This reference is provided as a quick way for your editor to

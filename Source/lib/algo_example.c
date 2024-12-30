@@ -7,7 +7,7 @@
  **************************************************************************/
 
 #include "algo_example.h"
-#include "../Logger.h"
+#include "../myLogger.h"
 #include "gain_control.h"
 
 #define VERSION "0.1.2"
@@ -19,6 +19,16 @@ typedef struct algo_handle {
     char param3[MAX_BUF_SIZE];
     float *param4;
 } algo_handle_t, *p_algo_handle_t;
+
+static int validate_param_size(int received_size, size_t expected_size, const char *param_name)
+{
+    if (received_size != expected_size) {
+        LOG_MSG_CF(LOG_ERROR, "Received param size %d Bytes for %s is not correct. Expected size is %zu",
+                   received_size, param_name, expected_size);
+        return E_PARAM_SIZE_INVALID;
+    }
+    return E_OK;
+}
 
 int get_algo_version(char *version)
 {
@@ -32,7 +42,7 @@ int get_algo_version(char *version)
 
 void *algo_init()
 {
-    void *algo_handle = (p_algo_handle_t)malloc(sizeof(algo_handle_t));
+    p_algo_handle_t algo_handle = (p_algo_handle_t)malloc(sizeof(algo_handle_t));
     if (algo_handle == NULL) {
         LOG_MSG_CF(LOG_ERROR, "allocate for algo_handle_t failed");
         return NULL;
@@ -54,7 +64,6 @@ void algo_deinit(void *algo_handle)
         algo_handle_ptr->param4 = NULL;
     }
     free(algo_handle);
-    algo_handle = NULL;
     LOG_MSG_CF(LOG_INFO, "algo_deinit OK");
 }
 
@@ -70,28 +79,23 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     }
 
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
+    int ret = E_OK;
     switch (cmd) {
-    case ALGO_PARAM1: {
-        if (param_size != sizeof(char)) {
-            LOG_MSG_CF(LOG_ERROR, "Received param size %d Bytes is not correct. Expected size is %zu",
-                       param_size, sizeof(char));
-            return E_PARAM_SIZE_INVALID;
+    case ALGO_PARAM1:
+        ret = validate_param_size(param_size, sizeof(char), "param1");
+        if (ret == E_OK) {
+            algo_handle_ptr->param1 = *(char *)param;
+            LOG_MSG_CF(LOG_INFO, "set param1: %c", algo_handle_ptr->param1);
         }
-        algo_handle_ptr->param1 = *(char *)param;
-        LOG_MSG_CF(LOG_INFO, "set param1: %c", algo_handle_ptr->param1);
         break;
-    }
-    case ALGO_PARAM2: {
-        if (param_size != sizeof(float)) {
-            LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is not correct. Expected size is %zu",
-                       param_size, sizeof(float));
-            return E_PARAM_SIZE_INVALID;
+    case ALGO_PARAM2:
+        ret = validate_param_size(param_size, sizeof(float), "param2");
+        if (ret == E_OK) {
+            algo_handle_ptr->param2 = *(float *)param;
+            LOG_MSG_CF(LOG_INFO, "set param2: %.1f", algo_handle_ptr->param2);
         }
-        algo_handle_ptr->param2 = *(float *)param;
-        LOG_MSG_CF(LOG_INFO, "set param2: %.1f", algo_handle_ptr->param2);
         break;
-    }
-    case ALGO_PARAM3: {
+    case ALGO_PARAM3:
         if (param_size > MAX_BUF_SIZE) {
             LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is too large. Max size is %u",
                        param_size, MAX_BUF_SIZE);
@@ -101,8 +105,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
         memcpy(algo_handle_ptr->param3, param, param_size);
         LOG_MSG_CF(LOG_INFO, "set param3: %s", algo_handle_ptr->param3);
         break;
-    }
-    case ALGO_PARAM4: {
+    case ALGO_PARAM4:
         if (param_size > MAX_BUF_SIZE) {
             LOG_MSG_CF(LOG_ERROR, "Received param size: %d Bytes is too large. Max size is %u",
                        param_size, MAX_BUF_SIZE);
@@ -115,12 +118,11 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
         }
         memcpy(algo_handle_ptr->param4, param, param_size);
         break;
-    }
     default:
         LOG_MSG_CF(LOG_ERROR, "cmd %d is invalid", cmd);
         return E_PARAM_OUT_OF_RANGE;
     }
-    return E_OK;
+    return ret;
 }
 
 int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_size)
@@ -135,26 +137,23 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     }
 
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
+    int ret = E_OK;
     switch (cmd) {
-    case ALGO_PARAM1: {
-        if (param_size != sizeof(char)) {
-            LOG_MSG_CF(LOG_ERROR, "param_size is not correct");
-            return E_PARAM_SIZE_INVALID;
+    case ALGO_PARAM1:
+        ret = validate_param_size(param_size, sizeof(char), "param1");
+        if (ret == E_OK) {
+            *(char *)param = algo_handle_ptr->param1;
+            LOG_MSG_CF(LOG_INFO, "get param1: %c", algo_handle_ptr->param1);
         }
-        *(char *)param = algo_handle_ptr->param1;
-        LOG_MSG_CF(LOG_INFO, "get param1: %c", algo_handle_ptr->param1);
         break;
-    }
-    case ALGO_PARAM2: {
-        if (param_size != sizeof(float)) {
-            LOG_MSG_CF(LOG_ERROR, "param_size is not correct");
-            return E_PARAM_SIZE_INVALID;
+    case ALGO_PARAM2:
+        ret = validate_param_size(param_size, sizeof(float), "param2");
+        if (ret == E_OK) {
+            *(float *)param = algo_handle_ptr->param2;
+            LOG_MSG_CF(LOG_INFO, "get param2: %.1f", algo_handle_ptr->param2);
         }
-        *(float *)param = algo_handle_ptr->param2;
-        LOG_MSG_CF(LOG_INFO, "get param2: %.1f", algo_handle_ptr->param2);
         break;
-    }
-    case ALGO_PARAM3: {
+    case ALGO_PARAM3:
         if (param_size > MAX_BUF_SIZE) {
             LOG_MSG_CF(LOG_ERROR, "param_size is too large");
             return E_PARAM_SIZE_INVALID;
@@ -162,20 +161,18 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
         memcpy(param, algo_handle_ptr->param3, param_size);
         LOG_MSG_CF(LOG_INFO, "get param3: %s", algo_handle_ptr->param3);
         break;
-    }
-    case ALGO_PARAM4: {
+    case ALGO_PARAM4:
         if (param_size > MAX_BUF_SIZE) {
             LOG_MSG_CF(LOG_ERROR, "param_size: %d is too large than MAX_BUF_SIZE %d", param_size, MAX_BUF_SIZE);
             return E_PARAM_SIZE_INVALID;
         }
         memcpy(param, algo_handle_ptr->param4, param_size);
         break;
-    }
     default:
         LOG_MSG_CF(LOG_ERROR, "cmd is invalid");
         return E_PARAM_OUT_OF_RANGE;
     }
-    return E_OK;
+    return ret;
 }
 
 int algo_process(void *algo_handle, const float *input, float *output, int block_size)
@@ -203,8 +200,7 @@ int algo_process(void *algo_handle, const float *input, float *output, int block
     }
 
     for (int i = 0; i < block_size; i++) {
-        float result = input[i] * dBChangeToFactor(algo_handle_ptr->param2);
-        output[i] = result;
+        output[i] = input[i] * dBChangeToFactor(algo_handle_ptr->param2);
     }
 
     return E_OK;

@@ -16,11 +16,13 @@
 
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
-#include <JucePluginDefines.h>
-#include <Windows.h>
+#include <JucePluginDefines.h> // Include this for JucePlugin_VersionString
+#if JUCE_WINDOWS
+#include <windows.h> // Include this for GetDpiForSystem
+#endif
 
 #define UI_WIDTH 400
-#define UI_HEIGHT 300
+#define UI_HEIGHT 220
 
 #define MARGIN 10
 
@@ -37,18 +39,14 @@
 #define LABEL_HEIGHT 20
 
 //==============================================================================
-DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p)
+void DemoAudioProcessorEditor::initializeUIComponents()
 {
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
     versionButton.setButtonText(JucePlugin_VersionString);
     versionButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
     versionButton.addListener(this);
     addAndMakeVisible(versionButton);
     versionButton.setLookAndFeel(&borderlessButtonLookAndFeel);
 
-    // Initialize ComboBox but don't make it visible yet
     logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
     logLevelComboBox.addItem("INFO", LOG_INFO);
     logLevelComboBox.addItem("WARN", LOG_WARN);
@@ -58,43 +56,51 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     logLevelComboBox.setVisible(false);
     logLevelComboBox.addListener(this);
     logLevelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-        audioProcessor.apvts, "logLevel", logLevelComboBox);
+        audioProcessor.getApvts(), "logLevel", logLevelComboBox);
 
     dataDumpButton.setButtonText("Data Dump");
     dataDumpButton.addListener(this);
     addAndMakeVisible(dataDumpButton);
     dataDumpButton.setVisible(false);
     dataDumpAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.apvts, "dataDumpEnable", dataDumpButton);
+        audioProcessor.getApvts(), "dataDumpEnable", dataDumpButton);
 
     bypassButton.setButtonText("Bypass");
     bypassButton.addListener(this);
     addAndMakeVisible(bypassButton);
     bypassButton.setLookAndFeel(&toggleButtonWithTextInsideLookAndFeel);
     bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.apvts, "bypassEnable", bypassButton);
+        audioProcessor.getApvts(), "bypassEnable", bypassButton);
 
     gainSlider.setSliderStyle(juce::Slider::Rotary);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
     gainSlider.addListener(this);
     addAndMakeVisible(gainSlider);
     gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "gain", gainSlider);
+        audioProcessor.getApvts(), "gain", gainSlider);
 
     gainLabel.setText("Gain", juce::dontSendNotification);
     gainLabel.attachToComponent(&gainSlider, true);
     gainLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(&gainLabel);
+}
 
+DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
+    : AudioProcessorEditor(&p), audioProcessor(p)
+{
+    initializeUIComponents();
     setSize(UI_WIDTH, UI_HEIGHT);
+
+#if JUCE_WINDOWS
     if (audioProcessor.getUsedPluginType() == 3 &&
         audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
         audioProcessor.getUsedHostAppVersion() >= 0 && audioProcessor.getUsedHostAppVersion() <= 2020) {
         float scaleFactor = GetDpiForSystem() / 96.0f; // DPI scaling for Windows
         setSize(UI_WIDTH * scaleFactor, UI_HEIGHT * scaleFactor);
     }
+#endif
 
-    LOG_MSG(LOG_INFO, "UI initialized");
+    LOG_MSG(LOG_DEBUG, "UI initialized");
 }
 
 DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
@@ -131,7 +137,7 @@ void DemoAudioProcessorEditor::resized()
     logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
     dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
 
-    LOG_MSG(LOG_INFO, "UI resized");
+    LOG_MSG(LOG_DEBUG, "UI resized");
 }
 
 void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)

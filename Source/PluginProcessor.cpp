@@ -16,11 +16,66 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include <JucePluginDefines.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 //==============================================================================
+class RegistrationComponent : public juce::Component
+{
+public:
+    RegistrationComponent()
+    {
+        addAndMakeVisible(contactLabel);
+        addAndMakeVisible(nativeCodeLabel);
+        addAndMakeVisible(NativeCodeEditor);
+        addAndMakeVisible(LicenseCodeLabel);
+        addAndMakeVisible(LicenseCodeEditor);
+        addAndMakeVisible(registerButton);
+        addAndMakeVisible(cancelButton);
+
+        NativeCodeEditor.setReadOnly(true);
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds().reduced(10);
+        contactLabel.setBounds(area.removeFromTop(25));
+        nativeCodeLabel.setBounds(area.removeFromTop(25).removeFromLeft(100));
+        NativeCodeEditor.setBounds(area.removeFromTop(25));
+        LicenseCodeLabel.setBounds(area.removeFromTop(25).removeFromLeft(100));
+        LicenseCodeEditor.setBounds(area.removeFromTop(25));
+        area.removeFromTop(30);
+        auto buttonArea = area.removeFromTop(30);
+        registerButton.setBounds(buttonArea.removeFromLeft(100));
+        cancelButton.setBounds(buttonArea.removeFromRight(100));
+    }
+
+    juce::Label contactLabel{"contactLabel", "Please contact Panda for license code."};
+    juce::Label nativeCodeLabel{"nativeCodeLabel", "Machine Code:"};
+    juce::TextEditor NativeCodeEditor{"NativeCodeEditor"};
+    juce::Label LicenseCodeLabel{"LicenseCodeLabel", "License Code:"};
+    juce::TextEditor LicenseCodeEditor{"LicenseCodeEditor"};
+    juce::TextButton registerButton{"Register", "Register"};
+    juce::TextButton cancelButton{"Cancel", "Cancel"};
+};
+
+void DemoAudioProcessor::initializeBuffers()
+{
+    for (int channel = 0; channel < MAX_SUPPORT_CHANNELS; channel++) {
+        write_buf[channel] = std::make_unique<float[]>(block_size);
+        if (!write_buf[channel]) {
+            LOG_MSG(LOG_ERROR, "Failed to allocate memory for write_buf[" + std::to_string(channel) + "]");
+            isInitDone = false;
+            return;
+        }
+        read_buf[channel] = std::make_unique<float[]>(block_size);
+        if (!read_buf[channel]) {
+            LOG_MSG(LOG_ERROR, "Failed to allocate memory for read_buf[" + std::to_string(channel) + "]");
+            isInitDone = false;
+            return;
+        }
+    }
+}
 
 DemoAudioProcessor::DemoAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -35,29 +90,22 @@ DemoAudioProcessor::DemoAudioProcessor()
 #endif
 {
     pluginType = getPluginType();
-    hostAppName = extractHostAppName();
-    hostAppVersion = getAuditionVersion();
+    hostAppName = getHostAppName();
+    if (hostAppName == "Adobe Audition") {
+        hostAppVersion = getAuditionVersion();
+    }
 
     RegType_t regType = checkRegType();
     if (regType == NoReg) {
-        juce::DialogWindow::LaunchOptions options;
-        auto contactLabel = std::make_unique<juce::Label>("contactLabel", "Please contact Panda for license code.");
-        auto nativeCodeLabel = std::make_unique<juce::Label>("nativeCodeLabel", "Machine Code:");
-        auto NativeCodeEditor = std::make_unique<juce::TextEditor>("NativeCodeEditor");
-        auto LicenseCodeLabel = std::make_unique<juce::Label>("LicenseCodeLabel", "License Code:");
-        auto LicenseCodeEditor = std::make_unique<juce::TextEditor>("LicenseCodeEditor");
-        auto registerButton = std::make_unique<juce::TextButton>("Register", "Register");
-        auto cancelButton = std::make_unique<juce::TextButton>("Cancel", "Cancel");
+        auto contentComponent = std::make_unique<RegistrationComponent>();
 
-        juce::String natevaCode = getSerial();
-        NativeCodeEditor->setText(natevaCode, juce::dontSendNotification);
-        NativeCodeEditor->setReadOnly(true);
+        contentComponent->NativeCodeEditor.setText(getSerial(), juce::dontSendNotification);
 
-        registerButton->onClick = [this, LicenseCodeEditor = LicenseCodeEditor.get()]() {
-            juce::String licenseCode = LicenseCodeEditor->getText();
+        contentComponent->registerButton.onClick = [this, contentComponent = contentComponent.get()]() {
+            juce::String licenseCode = contentComponent->LicenseCodeEditor.getText();
             RegType_t regType = regSoftware(licenseCode);
             if (regType == NoReg) {
-                isLicenseValid == false;
+                isLicenseValid = false;
                 juce::AlertWindow::showMessageBoxAsync(
                     juce::AlertWindow::WarningIcon,
                     "Registration Failed", "Invalid license code, please try again!");
@@ -71,66 +119,38 @@ DemoAudioProcessor::DemoAudioProcessor()
             }
         };
 
-        cancelButton->onClick = [this]() {
+        contentComponent->cancelButton.onClick = [this]() {
             isLicenseValid = false;
             LOG_MSG(LOG_WARN, "register canceled");
             juce::DialogWindow::getCurrentlyModalComponent()->exitModalState(0);
         };
 
-        auto contentComponent = std::make_unique<juce::Component>();
-        contentComponent->addAndMakeVisible(contactLabel.get());
-        contentComponent->addAndMakeVisible(nativeCodeLabel.get());
-        contentComponent->addAndMakeVisible(NativeCodeEditor.get());
-        contentComponent->addAndMakeVisible(LicenseCodeLabel.get());
-        contentComponent->addAndMakeVisible(LicenseCodeEditor.get());
-        contentComponent->addAndMakeVisible(registerButton.get());
-        contentComponent->addAndMakeVisible(cancelButton.get());
-
-        contactLabel->setBounds(50, 10, 200, 25);
-        nativeCodeLabel->setBounds(10, 40, 100, 25);
-        NativeCodeEditor->setBounds(120, 40, 250, 25);
-        LicenseCodeLabel->setBounds(10, 80, 100, 25);
-        LicenseCodeEditor->setBounds(120, 80, 250, 25);
-        registerButton->setBounds(10, 130, 100, 30);
-        cancelButton->setBounds(290, 130, 100, 30);
-
+        juce::DialogWindow::LaunchOptions options;
         options.content.setOwned(contentComponent.release());
         options.dialogTitle = "Registering the software";
-        options.dialogBackgroundColour = juce::Colours::grey;
+        options.dialogBackgroundColour = juce::Colours::darkgrey;
         options.escapeKeyTriggersCloseButton = true;
         options.useNativeTitleBar = true;
         options.resizable = false;
 
         options.content->setSize(400, 200);
-        juce::DialogWindow::showModalDialog("Software Registration", options.content.release(),
-                                            nullptr, juce::Colours::grey, true);
+        options.launchAsync();
+
     } else {
         isLicenseValid = true;
         LOG_MSG_CF(LOG_INFO, "License check OK, regester type: %d", regType);
     }
-    if (isLicenseValid == false) {
+    if (!isLicenseValid) {
         return;
-    }
-
-    for (int i = 0; i < 2; i++) {
-        write_buf[i] = (float *)calloc(block_size, sizeof(float));
-        if (write_buf[i] == nullptr) {
-            LOG_MSG(LOG_ERROR, "Failed to allocate write_buf[" + std::to_string(i) + "]");
-        }
-        read_buf[i] = (float *)calloc(block_size, sizeof(float));
-        if (read_buf[i] == nullptr) {
-            LOG_MSG(LOG_ERROR, "Failed to allocate read_buf[" + std::to_string(i) + "]");
-        }
     }
 
     char version[32] = {0};
     int ret = get_algo_version(version);
     if (ret != 0) {
         LOG_MSG(LOG_ERROR, "Failed to get_algo_version. ret = " + std::to_string(ret));
+        return;
     } else {
-        std::ostringstream oss;
-        oss << "get_algo_version: " << version;
-        LOG_MSG(LOG_INFO, oss.str());
+        LOG_MSG(LOG_INFO, "get_algo_version: " + std::string(version));
     }
 
     algo_handle = algo_init();
@@ -138,18 +158,21 @@ DemoAudioProcessor::DemoAudioProcessor()
         LOG_MSG(LOG_ERROR, "Failed to algo_init");
         return;
     }
+
+    initializeBuffers();
+
+    isInitDone = true;
+    LOG_MSG(LOG_INFO, "AudioProcessor initialized successfully.");
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
 {
-    for (int i = 0; i < 2; i++) {
-        if (write_buf[i] != nullptr) {
-            free(write_buf[i]);
-            write_buf[i] = nullptr;
+    for (int channel = 0; channel < MAX_SUPPORT_CHANNELS; channel++) {
+        if (write_buf[channel]) {
+            write_buf[channel].reset();
         }
-        if (read_buf[i] != nullptr) {
-            free(read_buf[i]);
-            read_buf[i] = nullptr;
+        if (read_buf[channel]) {
+            read_buf[channel].reset();
         }
     }
     if (algo_handle != nullptr) {
@@ -163,9 +186,7 @@ DemoAudioProcessor::~DemoAudioProcessor()
 //==============================================================================
 const juce::String DemoAudioProcessor::getName() const
 {
-    std::ostringstream oss;
-    oss << "getName: " << JucePlugin_Name;
-    LOG_MSG(LOG_INFO, oss.str());
+    LOG_MSG(LOG_INFO, "getName: " + juce::String(JucePlugin_Name).toStdString());
 
     return JucePlugin_Name;
 }
@@ -198,13 +219,16 @@ bool DemoAudioProcessor::isMidiEffect() const
     LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
     return true;
 #else
-    LOG_MSG(LOG_DEBUG, "isMidiEffect: false");
+    if (processBlockCounter == 0) {
+        LOG_MSG(LOG_DEBUG, "isMidiEffect: false");
+    }
     return false;
 #endif
 }
 
 double DemoAudioProcessor::getTailLengthSeconds() const
 {
+    // we don't konw the original sample rate before prepareToPlay
     if (originalSampleRate == 0) {
         LOG_MSG(LOG_INFO, "getTailLengthSeconds: 0");
         return 0;
@@ -257,6 +281,7 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
                           ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " milliseconds");
 
     setLatencySamples(block_size);
+    LOG_MSG(LOG_INFO, "set latency samples: " + std::to_string(block_size));
     processBlockCounter = 0;
 
     juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
@@ -270,9 +295,11 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     juce::String TimeStamp = juce::String(timeStr);
     processedDataDumpFile = dataDumpDir.getChildFile(TimeStamp + "processed.pcm");
     if (processedDataDumpFile.create().wasOk()) {
-        LOG_MSG(LOG_DEBUG, "Created data dump file: " + processedDataDumpFile.getFullPathName().toStdString());
+        LOG_MSG(LOG_DEBUG, "Created data dump file: \"" +
+                               processedDataDumpFile.getFullPathName().toStdString() + "\"");
     } else {
-        LOG_MSG(LOG_ERROR, "Failed to create data dump file: " + processedDataDumpFile.getFullPathName().toStdString());
+        LOG_MSG(LOG_ERROR, "Failed to create data dump file: \"" +
+                               processedDataDumpFile.getFullPathName().toStdString() + "\"");
     }
 }
 
@@ -285,6 +312,12 @@ void DemoAudioProcessor::releaseResources()
     }
     if (dataDumpDir.isDirectory()) {
         juce::Array<juce::File> files;
+        dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
+        for (auto &file : files) {
+            if (file.getSize() == 0) {
+                file.deleteFile();
+            }
+        }
         dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
         if (files.size() == 0) {
             dataDumpDir.deleteRecursively();
@@ -322,10 +355,11 @@ bool DemoAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) cons
 
 void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
 {
-    if (isLicenseValid == false) {
+    if (!isLicenseValid || !isInitDone) {
         return;
     }
-    clock_t start = clock();
+
+    // auto startTime = juce::Time::getMillisecondCounterHiRes();
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -347,47 +381,50 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
 
     while (buffer_index != numSamples) {
         for (int channel = 0; channel < valid_channels; channel++) {
-            p_write[channel] = write_buf[channel];
-            p_read[channel] = read_buf[channel];
+            p_write[channel] = write_buf[channel].get();
+            p_read[channel] = read_buf[channel].get();
         }
         int n_samples_to_write = 0;
         n_samples_to_write = MIN(numSamples - buffer_index, block_size - write_index);
         n_samples_to_write = MIN(n_samples_to_write, block_size - read_index);
-        for (int i = 0; i < n_samples_to_write; i++) {
+        for (int sample = 0; sample < n_samples_to_write; sample++) {
             for (int channel = 0; channel < valid_channels; channel++) {
-                write_buf[channel][write_index + i] = buffer.getSample(channel, buffer_index + i);
+                write_buf[channel][write_index + sample] = buffer.getSample(channel, buffer_index + sample);
             }
         }
         write_index += n_samples_to_write;
         if (write_index == block_size) {
+            auto frameStart = juce::Time::getMillisecondCounterHiRes();
             if (bypassEnable) {
                 // do nothing or copy the input buffer to the output buffer
             } else {
-                for (int ch = 0; ch < valid_channels; ch++) {
-                    int ret = algo_process(algo_handle, write_buf[ch], write_buf[ch], block_size);
+                for (int channel = 0; channel < valid_channels; channel++) {
+                    int ret = algo_process(algo_handle, write_buf[channel].get(), write_buf[channel].get(), block_size);
                     if (ret != 0) {
                         LOG_MSG(LOG_ERROR, "Failed to algo_process. ret = " + std::to_string(ret));
                     }
                 }
                 if (dataDumpEnable) {
                     if (valid_channels == 1) {
-                        dumpFloatPCMData(processedDataDumpFile, write_buf[0], block_size);
+                        dumpFloatPCMData(processedDataDumpFile, write_buf[0].get(), block_size);
                     } else if (valid_channels == MAX_SUPPORT_CHANNELS) {
-                        dumpFloatPCMData(processedDataDumpFile, write_buf[0], write_buf[1], block_size);
+                        dumpFloatPCMData(processedDataDumpFile, write_buf[0].get(), write_buf[1].get(), block_size);
                     }
                 }
             }
+            auto frameStop = juce::Time::getMillisecondCounterHiRes();
+            LOG_MSG(LOG_DEBUG, "algo_process frame " + std::to_string(algoFrameCounter++) +
+                                   " elapsed time: " + std::to_string(frameStop - frameStart) + " ms");
         }
-        for (int i = 0; i < n_samples_to_write; i++) {
+        for (int sample = 0; sample < n_samples_to_write; sample++) {
             for (int channel = 0; channel < valid_channels; channel++) {
-                buffer.setSample(channel, buffer_index + i, read_buf[channel][read_index + i]);
+                buffer.setSample(channel, buffer_index + sample, read_buf[channel][read_index + sample]);
             }
         }
         buffer_index += n_samples_to_write;
         if (write_index == block_size) {
             for (int channel = 0; channel < valid_channels; channel++) {
-                write_buf[channel] = p_read[channel];
-                read_buf[channel] = p_write[channel];
+                write_buf[channel].swap(read_buf[channel]);
             }
             write_index = 0;
         }
@@ -397,15 +434,16 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
         }
     }
 
-    clock_t stop = clock();
-    LOG_MSG(LOG_DEBUG, "processBlockCounter = " + std::to_string(processBlockCounter) +
-                           ", elapsed time: " + std::to_string((double)(stop - start)) + " ms");
+    // auto stopTime = juce::Time::getMillisecondCounterHiRes();
+    // auto elapsedTime = stopTime - startTime;
+    // LOG_MSG(LOG_DEBUG, "processBlockCounter = " + std::to_string(processBlockCounter) +
+    //                        ", elapsed time: " + std::to_string(elapsedTime) + " ms");
 }
 
 //==============================================================================
 bool DemoAudioProcessor::hasEditor() const
 {
-    if (isLicenseValid == false) {
+    if (!isLicenseValid || !isInitDone) {
         return false;
     }
     LOG_MSG(LOG_INFO, "hasEditor: true");

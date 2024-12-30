@@ -19,7 +19,7 @@ typedef enum RegType {
 } RegType_t;
 
 int getPluginType();
-std::string extractHostAppName();
+std::string getHostAppName();
 int getAuditionVersion();
 void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples);
 void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft,
@@ -27,8 +27,9 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft,
 void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float> &buffer);
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam = 32, uint16_t audioFormat = 3);
-bool checkLicenseFile(const juce::File &licenseFile, uint32_t nYear = 0, uint32_t nMonth = 0, uint32_t nDay = 7,
-                      uint32_t nHour = 0, uint32_t nMinute = 0, uint32_t nSecond = 0);
+
+bool get_cpu_id(std::string &cpu_id);
+bool get_disk_id(std::string &disk_id);
 juce::String getSerial();
 RegType_t checkRegType();
 RegType_t regSoftware(juce::String strLicense);
