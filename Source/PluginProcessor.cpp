@@ -18,6 +18,10 @@
 #include "PluginEditor.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define BYPASS_MDII_CONTROLLER_NUMBER 0x13
+#define BYPASS_ENABLE_MDII_CONTROLLER_VALUE 0x7F
+#define BYPASS_DISABLE_MDII_CONTROLLER_VALUE 0x00
+#define BYPASS_MDII_CHANNEL 1
 
 //==============================================================================
 class RegistrationComponent : public juce::Component
@@ -216,7 +220,9 @@ bool DemoAudioProcessor::producesMidi() const
 bool DemoAudioProcessor::isMidiEffect() const
 {
 #if JucePlugin_IsMidiEffect
-    LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
+    if (processBlockCounter == 0) {
+        LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
+    }
     return true;
 #else
     if (processBlockCounter == 0) {
@@ -371,6 +377,34 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
                               ", about " + std::to_string(numSamples * 1000.0f / originalSampleRate) + " milliseconds");
     }
 
+    for (const auto &midiEvent : midiMessages) {
+        const auto &message = midiEvent.getMessage();
+        LOG_MSG(LOG_DEBUG, "Midi Message: " + message.getDescription().toStdString());
+        if (message.isController()) {
+            int controllerNumber = message.getControllerNumber();
+            int controllerValue = message.getControllerValue();
+            int channel = message.getChannel();
+            LOG_MSG(LOG_DEBUG, "MIDI Controller Number: " + std::to_string(controllerNumber) +
+                                   ", Controller Value: " + std::to_string(controllerValue) +
+                                   ", Channel: " + std::to_string(channel));
+            if (controllerNumber == 0x13) {
+                if (controllerValue == 0x7F && channel == 1) {
+                    bypassEnable = true;
+                    notifyBypassEnableChanged();
+                    LOG_MSG(LOG_INFO, "Bypass is enabled by MIDI Controller");
+                } else if (controllerValue == 0x00 && channel == 1) {
+                    bypassEnable = false;
+                    notifyBypassEnableChanged();
+                    LOG_MSG(LOG_INFO, "Bypass is disabled by MIDI Controller");
+                } else {
+                    LOG_MSG(LOG_WARN, "Invalid MIDI Controller Value: " + std::to_string(controllerValue) +
+                                          ", or Channel: " + std::to_string(channel) +
+                                          ", for Controller Number: " + std::to_string(controllerNumber));
+                }
+            }
+        }
+    }
+
     int buffer_index = 0;
     float *p_write[MAX_SUPPORT_CHANNELS] = {0};
     float *p_read[MAX_SUPPORT_CHANNELS] = {0};
@@ -432,6 +466,26 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
         if (read_index == block_size) {
             read_index = 0;
         }
+    }
+
+    midiMessages.clear();
+
+    double sampleRate = getSampleRate();
+    double blockDuration = buffer.getNumSamples() / sampleRate;
+    midiControllerTimeElapsed += blockDuration;
+
+    if (midiControllerTimeElapsed >= midiControllerinterval) {
+        midiControllerTimeElapsed -= midiControllerinterval;
+        juce::MidiMessage midiMessageTemp;
+        if (sendZeroValue) {
+            midiMessageTemp = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
+                                                                 BYPASS_DISABLE_MDII_CONTROLLER_VALUE);
+        } else {
+            midiMessageTemp = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
+                                                                 BYPASS_ENABLE_MDII_CONTROLLER_VALUE);
+        }
+        midiMessages.addEvent(midiMessageTemp, 0);
+        sendZeroValue = !sendZeroValue;
     }
 
     // auto stopTime = juce::Time::getMillisecondCounterHiRes();

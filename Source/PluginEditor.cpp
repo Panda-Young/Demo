@@ -90,6 +90,7 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
 {
     initializeUIComponents();
     setSize(UI_WIDTH, UI_HEIGHT);
+    audioProcessor.addListener(this);
 
 #if JUCE_WINDOWS
     if (audioProcessor.getUsedPluginType() == 3 &&
@@ -105,6 +106,8 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
 
 DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
 {
+    audioProcessor.removeListener(this);
+
     versionButton.removeListener(this);
     versionButton.setLookAndFeel(nullptr);
     logLevelComboBox.removeListener(this);

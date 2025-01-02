@@ -88,6 +88,16 @@ public:
     float getGainValue() const { return gain; }
     void *getAlgoHandle() const { return algo_handle; }
 
+    class Listener
+    {
+    public:
+        virtual ~Listener() = default;
+        virtual void bypassEnableChanged(bool newState) = 0;
+    };
+
+    void addListener(Listener* listener) { listeners.add(listener); }
+    void removeListener(Listener* listener) { listeners.remove(listener); }
+
     juce::AudioProcessorValueTreeState &getApvts() { return apvts; }
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     myLogger &logger = myLogger::getInstance();
@@ -103,6 +113,9 @@ private:
     bool dataDumpEnable = false;
     bool isLicenseValid = false;
     bool isInitDone = false;
+    bool sendZeroValue = true;
+    double midiControllerTimeElapsed = 0.0;
+    const double midiControllerinterval = 10.0;
 
     uint64_t processBlockCounter = 0;
     uint64_t algoFrameCounter = 0;
@@ -119,6 +132,13 @@ private:
 
     double originalSampleRate = 0;
     int originalChannels = 0;
+
+    juce::ListenerList<Listener> listeners;
+
+    void notifyBypassEnableChanged()
+    {
+        listeners.call([this](Listener& l) { l.bypassEnableChanged(bypassEnable); });
+    }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)
 };

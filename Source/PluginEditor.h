@@ -58,7 +58,8 @@ public:
 class DemoAudioProcessorEditor : public juce::AudioProcessorEditor,
                                  public juce::Button::Listener,
                                  public juce::Slider::Listener,
-                                 public juce::ComboBox::Listener
+                                 public juce::ComboBox::Listener,
+                                 public DemoAudioProcessor::Listener
 {
 public:
     DemoAudioProcessorEditor(DemoAudioProcessor &);
@@ -72,6 +73,12 @@ public:
     void comboBoxChanged(juce::ComboBox *comboBox) override;
     void sliderValueChanged(juce::Slider *slider) override;
     void initializeUIComponents();
+    void updateUIComponentsFromProcessor();
+
+    void bypassEnableChanged(bool newState) override
+    {
+        bypassButton.setToggleState(newState, juce::dontSendNotification);
+    }
 
 private:
     // This reference is provided as a quick way for your editor to
