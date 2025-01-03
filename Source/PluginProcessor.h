@@ -93,10 +93,11 @@ public:
     public:
         virtual ~Listener() = default;
         virtual void bypassEnableChanged(bool newState) = 0;
+        virtual void gainValueChanged(float newValue) = 0;
     };
 
-    void addListener(Listener* listener) { listeners.add(listener); }
-    void removeListener(Listener* listener) { listeners.remove(listener); }
+    void addListener(Listener *listener) { listeners.add(listener); }
+    void removeListener(Listener *listener) { listeners.remove(listener); }
 
     juce::AudioProcessorValueTreeState &getApvts() { return apvts; }
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
@@ -113,7 +114,7 @@ private:
     bool dataDumpEnable = false;
     bool isLicenseValid = false;
     bool isInitDone = false;
-    bool sendZeroValue = true;
+    bool sendZeroValue = false;
     double midiControllerTimeElapsed = 0.0;
     const double midiControllerinterval = 10.0;
 
@@ -123,6 +124,7 @@ private:
     const int block_size = 2048;
     void *algo_handle = nullptr;
     float gain = 0.0f;
+    float midiGain = 0.0f;
 
     std::unique_ptr<float[]> write_buf[MAX_SUPPORT_CHANNELS];
     std::unique_ptr<float[]> read_buf[MAX_SUPPORT_CHANNELS];
@@ -137,7 +139,11 @@ private:
 
     void notifyBypassEnableChanged()
     {
-        listeners.call([this](Listener& l) { l.bypassEnableChanged(bypassEnable); });
+        listeners.call([this](Listener &l) { l.bypassEnableChanged(bypassEnable); });
+    }
+    void DemoAudioProcessor::notifyGainValueChanged()
+    {
+        listeners.call([this](Listener &l) { l.gainValueChanged(gain); });
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)

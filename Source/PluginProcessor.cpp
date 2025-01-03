@@ -22,6 +22,12 @@
 #define BYPASS_ENABLE_MDII_CONTROLLER_VALUE 0x7F
 #define BYPASS_DISABLE_MDII_CONTROLLER_VALUE 0x00
 #define BYPASS_MDII_CHANNEL 1
+#define GAIN_MIDI_CONTROLLER_NUMBER 0x14
+#define GAIN_MDII_CHANNEL 1
+#define MAX_GAIN_VALUE 20.0f
+#define MIN_GAIN_VALUE -20.0f
+#define MAX_MIDI_CONTROL_VALUE 127
+#define MIN_MIDI_CONTROL_VALUE 0
 
 //==============================================================================
 class RegistrationComponent : public juce::Component
@@ -387,19 +393,36 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
             LOG_MSG(LOG_DEBUG, "MIDI Controller Number: " + std::to_string(controllerNumber) +
                                    ", Controller Value: " + std::to_string(controllerValue) +
                                    ", Channel: " + std::to_string(channel));
-            if (controllerNumber == 0x13) {
-                if (controllerValue == 0x7F && channel == 1) {
-                    bypassEnable = true;
-                    notifyBypassEnableChanged();
-                    LOG_MSG(LOG_INFO, "Bypass is enabled by MIDI Controller");
-                } else if (controllerValue == 0x00 && channel == 1) {
-                    bypassEnable = false;
-                    notifyBypassEnableChanged();
-                    LOG_MSG(LOG_INFO, "Bypass is disabled by MIDI Controller");
+            if (controllerNumber == BYPASS_MDII_CONTROLLER_NUMBER) {
+                if (controllerValue == BYPASS_ENABLE_MDII_CONTROLLER_VALUE && channel == BYPASS_MDII_CHANNEL) {
+                    if (!bypassEnable) {
+                        bypassEnable = true;
+                        notifyBypassEnableChanged();
+                        LOG_MSG(LOG_INFO, "Bypass is enabled by MIDI Controller");
+                    }
+                } else if (controllerValue == BYPASS_DISABLE_MDII_CONTROLLER_VALUE && channel == BYPASS_MDII_CHANNEL) {
+                    if (bypassEnable) {
+                        bypassEnable = false;
+                        notifyBypassEnableChanged();
+                        LOG_MSG(LOG_INFO, "Bypass is disabled by MIDI Controller");
+                    }
                 } else {
                     LOG_MSG(LOG_WARN, "Invalid MIDI Controller Value: " + std::to_string(controllerValue) +
                                           ", or Channel: " + std::to_string(channel) +
                                           ", for Controller Number: " + std::to_string(controllerNumber));
+                }
+            } else if (controllerNumber == GAIN_MIDI_CONTROLLER_NUMBER && channel == GAIN_MDII_CHANNEL) {
+                float newGain = (static_cast<float>(controllerValue) / MAX_MIDI_CONTROL_VALUE) *
+                                    (MAX_GAIN_VALUE - MIN_GAIN_VALUE) +
+                                MIN_GAIN_VALUE;
+                if (newGain != gain) {
+                    gain = newGain;
+                    int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
+                    if (ret != 0) {
+                        LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
+                    }
+                    notifyGainValueChanged();
+                    LOG_MSG(LOG_INFO, "Gain is set to " + std::to_string(gain) + " dB by MIDI Controller");
                 }
             }
         }
@@ -476,16 +499,25 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
 
     if (midiControllerTimeElapsed >= midiControllerinterval) {
         midiControllerTimeElapsed -= midiControllerinterval;
-        juce::MidiMessage midiMessageTemp;
+        juce::MidiMessage BypassmidiMessage, gainMidiMessage;
         if (sendZeroValue) {
-            midiMessageTemp = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
-                                                                 BYPASS_DISABLE_MDII_CONTROLLER_VALUE);
+            BypassmidiMessage = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
+                                                                   BYPASS_DISABLE_MDII_CONTROLLER_VALUE);
         } else {
-            midiMessageTemp = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
-                                                                 BYPASS_ENABLE_MDII_CONTROLLER_VALUE);
+            BypassmidiMessage = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
+                                                                   BYPASS_ENABLE_MDII_CONTROLLER_VALUE);
         }
-        midiMessages.addEvent(midiMessageTemp, 0);
+        midiMessages.addEvent(BypassmidiMessage, 0);
         sendZeroValue = !sendZeroValue;
+        midiGain += 0.5f;
+        if (midiGain > 20.0f) {
+            midiGain = -20.0f;
+        }
+        gainMidiMessage = juce::MidiMessage::controllerEvent(
+            GAIN_MDII_CHANNEL, GAIN_MIDI_CONTROLLER_NUMBER,
+            static_cast<int>(std::round((midiGain - MIN_GAIN_VALUE) / (MAX_GAIN_VALUE - MIN_GAIN_VALUE) *
+                                        MAX_MIDI_CONTROL_VALUE)));
+        midiMessages.addEvent(gainMidiMessage, 0);
     }
 
     // auto stopTime = juce::Time::getMillisecondCounterHiRes();
@@ -563,7 +595,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DemoAudioProcessor::createPa
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("dataDumpEnable", "Data Dump", false));
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("bypassEnable", "Bypass", false));
     paramsLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
+        "gain", "Gain", juce::NormalisableRange<float>(MIN_GAIN_VALUE, MAX_GAIN_VALUE, 0.001f), 0.0f));
     return paramsLayout;
 }
 

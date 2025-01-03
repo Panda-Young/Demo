@@ -92,7 +92,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
         ret = validate_param_size(param_size, sizeof(float), "param2");
         if (ret == E_OK) {
             algo_handle_ptr->param2 = *(float *)param;
-            LOG_MSG_CF(LOG_INFO, "set param2: %.1f", algo_handle_ptr->param2);
+            LOG_MSG_CF(LOG_INFO, "set param2: %.3f", algo_handle_ptr->param2);
         }
         break;
     case ALGO_PARAM3:
