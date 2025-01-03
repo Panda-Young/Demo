@@ -22,6 +22,8 @@
 #define BYPASS_ENABLE_MDII_CONTROLLER_VALUE 0x7F
 #define BYPASS_DISABLE_MDII_CONTROLLER_VALUE 0x00
 #define BYPASS_MDII_CHANNEL 1
+#define GAIN_MIDI_CONTROLLER_NUMBER 0x14
+#define GAIN_MDII_CHANNEL 1
 
 //==============================================================================
 class RegistrationComponent : public juce::Component
@@ -387,12 +389,12 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
             LOG_MSG(LOG_DEBUG, "MIDI Controller Number: " + std::to_string(controllerNumber) +
                                    ", Controller Value: " + std::to_string(controllerValue) +
                                    ", Channel: " + std::to_string(channel));
-            if (controllerNumber == 0x13) {
-                if (controllerValue == 0x7F && channel == 1) {
+            if (controllerNumber == BYPASS_MDII_CONTROLLER_NUMBER) {
+                if (controllerValue == BYPASS_ENABLE_MDII_CONTROLLER_VALUE && channel == BYPASS_MDII_CHANNEL) {
                     bypassEnable = true;
                     notifyBypassEnableChanged();
                     LOG_MSG(LOG_INFO, "Bypass is enabled by MIDI Controller");
-                } else if (controllerValue == 0x00 && channel == 1) {
+                } else if (controllerValue == BYPASS_DISABLE_MDII_CONTROLLER_VALUE && channel == BYPASS_MDII_CHANNEL) {
                     bypassEnable = false;
                     notifyBypassEnableChanged();
                     LOG_MSG(LOG_INFO, "Bypass is disabled by MIDI Controller");
@@ -400,6 +402,17 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
                     LOG_MSG(LOG_WARN, "Invalid MIDI Controller Value: " + std::to_string(controllerValue) +
                                           ", or Channel: " + std::to_string(channel) +
                                           ", for Controller Number: " + std::to_string(controllerNumber));
+                }
+            } else if (controllerNumber == GAIN_MIDI_CONTROLLER_NUMBER && channel == GAIN_MDII_CHANNEL) {
+                float newGain = (static_cast<float>(controllerValue) / 0x7F) * 40.0f - 20.0f;
+                if (newGain != gain) {
+                    gain = newGain;
+                    int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
+                    if (ret != 0) {
+                        LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
+                    }
+                    notifyGainValueChanged();
+                    LOG_MSG(LOG_INFO, "Gain is set to " + std::to_string(gain) + " dB by MIDI Controller");
                 }
             }
         }
@@ -476,16 +489,23 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
 
     if (midiControllerTimeElapsed >= midiControllerinterval) {
         midiControllerTimeElapsed -= midiControllerinterval;
-        juce::MidiMessage midiMessageTemp;
+        juce::MidiMessage BypassmidiMessage, gainMidiMessage;
         if (sendZeroValue) {
-            midiMessageTemp = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
+            BypassmidiMessage = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
                                                                  BYPASS_DISABLE_MDII_CONTROLLER_VALUE);
         } else {
-            midiMessageTemp = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
+            BypassmidiMessage = juce::MidiMessage::controllerEvent(BYPASS_MDII_CHANNEL, BYPASS_MDII_CONTROLLER_NUMBER,
                                                                  BYPASS_ENABLE_MDII_CONTROLLER_VALUE);
         }
-        midiMessages.addEvent(midiMessageTemp, 0);
+        midiMessages.addEvent(BypassmidiMessage, 0);
         sendZeroValue = !sendZeroValue;
+        midiGain += 0.5f;
+        if (midiGain > 20.0f) {
+            midiGain = -20.0f;
+        }
+        gainMidiMessage = juce::MidiMessage::controllerEvent(GAIN_MDII_CHANNEL, GAIN_MIDI_CONTROLLER_NUMBER,
+                                  static_cast<int>((midiGain + 20.0f) * 0x7F / 40.0f));
+        midiMessages.addEvent(gainMidiMessage, 0);
     }
 
     // auto stopTime = juce::Time::getMillisecondCounterHiRes();

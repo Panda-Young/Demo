@@ -78,6 +78,11 @@ public:
     void bypassEnableChanged(bool newState) override
     {
         bypassButton.setToggleState(newState, juce::dontSendNotification);
+        // don't sync notification, due to the fact that the button will trigger the bypassEnableChanged callback
+    }
+    void gainValueChanged(float newValue) override
+    {
+        gainSlider.setValue(newValue, juce::dontSendNotification);
     }
 
 private:

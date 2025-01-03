@@ -159,7 +159,7 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
         audioProcessor.setDataDumpState(dataDumpButton.getToggleState());
         LOG_MSG(LOG_INFO, "Data dump is " + std::string(audioProcessor.getDataDumpState() ? "enabled" : "disabled"));
     } else if (button == &bypassButton) {
-        audioProcessor.setBypassState(!audioProcessor.getBypassState());
+        audioProcessor.setBypassState(bypassButton.getToggleState());
         LOG_MSG(LOG_INFO, "Bypass is " + std::string(audioProcessor.getBypassState() ? "enabled" : "disabled"));
     } else {
         // program should not reach here
