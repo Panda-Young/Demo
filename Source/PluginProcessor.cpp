@@ -18,6 +18,8 @@
 #include "PluginEditor.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX_GAIN_VALUE 20.0f
+#define MIN_GAIN_VALUE -20.0f
 
 //==============================================================================
 class RegistrationComponent : public juce::Component
@@ -216,7 +218,9 @@ bool DemoAudioProcessor::producesMidi() const
 bool DemoAudioProcessor::isMidiEffect() const
 {
 #if JucePlugin_IsMidiEffect
-    LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
+    if (processBlockCounter == 0) {
+        LOG_MSG(LOG_DEBUG, "isMidiEffect: true");
+    }
     return true;
 #else
     if (processBlockCounter == 0) {
@@ -308,7 +312,8 @@ void DemoAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     if (processBlockCounter) {
-        convertPCMtoWAV(processedDataDumpFile, originalChannels, originalSampleRate, 32, 3);
+        convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(valid_channels),
+                        static_cast<uint32_t>(originalSampleRate), 32, 3);
     }
     if (dataDumpDir.isDirectory()) {
         juce::Array<juce::File> files;
@@ -365,6 +370,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     int numSamples = buffer.getNumSamples();
     if (processBlockCounter++ == 0) {
+        originalChannels = totalNumInputChannels;
         LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples) +
                               ", totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
                               ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels) +
@@ -374,10 +380,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     int buffer_index = 0;
     float *p_write[MAX_SUPPORT_CHANNELS] = {0};
     float *p_read[MAX_SUPPORT_CHANNELS] = {0};
-    int valid_channels = MIN(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
-    if (originalChannels != totalNumInputChannels) {
-        originalChannels = totalNumInputChannels;
-    }
+    valid_channels = MIN(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
 
     while (buffer_index != numSamples) {
         for (int channel = 0; channel < valid_channels; channel++) {
@@ -509,7 +512,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DemoAudioProcessor::createPa
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("dataDumpEnable", "Data Dump", false));
     paramsLayout.add(std::make_unique<juce::AudioParameterBool>("bypassEnable", "Bypass", false));
     paramsLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "gain", "Gain", juce::NormalisableRange<float>(-20.0f, 20.0f, 0.001f), 0.0f));
+        "gain", "Gain", juce::NormalisableRange<float>(MIN_GAIN_VALUE, MAX_GAIN_VALUE, 0.001f), 0.0f));
     return paramsLayout;
 }
 

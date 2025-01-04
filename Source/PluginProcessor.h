@@ -119,6 +119,7 @@ private:
 
     double originalSampleRate = 0;
     int originalChannels = 0;
+    int valid_channels = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)
 };

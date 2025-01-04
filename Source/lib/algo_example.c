@@ -20,7 +20,7 @@ typedef struct algo_handle {
     float *param4;
 } algo_handle_t, *p_algo_handle_t;
 
-static int validate_param_size(int received_size, size_t expected_size, const char *param_name)
+static int validate_param_size(int received_size, int expected_size, const char *param_name)
 {
     if (received_size != expected_size) {
         LOG_MSG_CF(LOG_ERROR, "Received param size %d Bytes for %s is not correct. Expected size is %zu",
@@ -92,7 +92,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
         ret = validate_param_size(param_size, sizeof(float), "param2");
         if (ret == E_OK) {
             algo_handle_ptr->param2 = *(float *)param;
-            LOG_MSG_CF(LOG_INFO, "set param2: %.1f", algo_handle_ptr->param2);
+            LOG_MSG_CF(LOG_INFO, "set param2: %.3f", algo_handle_ptr->param2);
         }
         break;
     case ALGO_PARAM3:
