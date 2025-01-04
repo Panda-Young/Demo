@@ -96,8 +96,8 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     if (audioProcessor.getUsedPluginType() == 3 &&
         audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
         audioProcessor.getUsedHostAppVersion() >= 0 && audioProcessor.getUsedHostAppVersion() <= 2020) {
-        float scaleFactor = GetDpiForSystem() / 96.0f; // DPI scaling for Windows
-        setSize(UI_WIDTH * scaleFactor, UI_HEIGHT * scaleFactor);
+        float scaleFactor = static_cast<float>(GetDpiForSystem()) / 96.0f; // DPI scaling for Windows
+        setSize(static_cast<int>(UI_WIDTH * scaleFactor), static_cast<int>(UI_HEIGHT * scaleFactor));
     }
 #endif
 
@@ -129,15 +129,16 @@ void DemoAudioProcessorEditor::paint(juce::Graphics &g)
 
 void DemoAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
-    auto bounds = getLocalBounds().reduced(MARGIN);
-    gainSlider.setBounds((UI_WIDTH - SLIDER_WIDTH) / 2, MARGIN, SLIDER_WIDTH, SLIDER_HEIGHT);
-    bypassButton.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, MARGIN * 2 + SLIDER_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT);
+    int X_OFFSET = (UI_WIDTH - SLIDER_WIDTH) / 2;
+    int Y_OFFSET = MARGIN;
+    gainSlider.setBounds(X_OFFSET, Y_OFFSET, SLIDER_WIDTH, SLIDER_HEIGHT);
+    X_OFFSET = (UI_WIDTH - BUTTON_WIDTH) / 2;
+    Y_OFFSET += SLIDER_HEIGHT + MARGIN;
+    bypassButton.setBounds(X_OFFSET, Y_OFFSET, BUTTON_WIDTH, BUTTON_HEIGHT);
 
     int bottom = UI_HEIGHT - BUTTON_HEIGHT - MARGIN;
     versionButton.setBounds(MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((UI_WIDTH - BUTTON_WIDTH) / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((int)((UI_WIDTH - BUTTON_WIDTH) / 2), bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
     dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
 
     LOG_MSG(LOG_DEBUG, "UI resized");
@@ -172,9 +173,9 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
 {
     if (slider == &gainSlider) {
         LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(audioProcessor.getGainValue()) + " dB");
-        audioProcessor.setGainValue(gainSlider.getValue());
+        audioProcessor.setGainValue(static_cast<float>(gainSlider.getValue()));
         float gainValue = audioProcessor.getGainValue();
-        int ret = algo_set_param(audioProcessor.getAlgoHandle(), ALGO_PARAM2, &gainValue, sizeof(float));
+        int ret = algo_set_param(audioProcessor.getAlgoHandle(), ALGO_PARAM2, &gainValue, (int)sizeof(float));
         if (ret != E_OK) {
             LOG_MSG(LOG_ERROR, "algo_set_param failed. ret = " + std::to_string(ret));
         }

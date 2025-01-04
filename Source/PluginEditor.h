@@ -28,6 +28,11 @@ public:
     void drawButtonBackground(juce::Graphics &g, juce::Button &button, const juce::Colour &backgroundColour,
                               bool isMouseOverButton, bool isButtonDown) override
     {
+        (void)g;
+        (void)button;
+        (void)backgroundColour;
+        (void)isMouseOverButton;
+        (void)isButtonDown;
         // Do not draw any background or border
     }
 };
@@ -38,12 +43,15 @@ public:
     void drawToggleButton(juce::Graphics &g, juce::ToggleButton &button,
                           bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
+        (void)shouldDrawButtonAsHighlighted;
+        (void)shouldDrawButtonAsDown;
         auto fontSize = juce::jmin(15.0f, button.getHeight() * 0.75f);
         auto tickWidth = button.getWidth() * 0.8f;
+        auto tickHeight = static_cast<float>(button.getHeight());
+        auto tickXoffset = 4.0f;
+        auto tickYoffset = (static_cast<float>(button.getHeight()) - static_cast<float>(button.getHeight())) * 0.5f;
         auto cornerSize = juce::jmin(button.getHeight(), button.getWidth()) * 0.15f;
-
-        juce::Rectangle<float> tickBounds(4.0f, ((float)button.getHeight() - button.getHeight()) * 0.5f,
-                                          tickWidth, button.getHeight());
+        juce::Rectangle<float> tickBounds(tickXoffset, tickYoffset, tickWidth, tickHeight);
         g.setColour(button.isEnabled() ? (button.getToggleState() ? juce::Colours::mediumseagreen : juce::Colours::grey)
                                        : juce::Colours::grey);
         g.fillRoundedRectangle(tickBounds, cornerSize);
@@ -73,7 +81,6 @@ public:
     void comboBoxChanged(juce::ComboBox *comboBox) override;
     void sliderValueChanged(juce::Slider *slider) override;
     void initializeUIComponents();
-    void updateUIComponentsFromProcessor();
 
     void bypassEnableChanged(bool newState) override
     {

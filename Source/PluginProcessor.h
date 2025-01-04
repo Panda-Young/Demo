@@ -134,6 +134,7 @@ private:
 
     double originalSampleRate = 0;
     int originalChannels = 0;
+    int valid_channels = 0;
 
     juce::ListenerList<Listener> listeners;
 
@@ -141,7 +142,7 @@ private:
     {
         listeners.call([this](Listener &l) { l.bypassEnableChanged(bypassEnable); });
     }
-    void DemoAudioProcessor::notifyGainValueChanged()
+    void notifyGainValueChanged()
     {
         listeners.call([this](Listener &l) { l.gainValueChanged(gain); });
     }

@@ -320,7 +320,8 @@ void DemoAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     if (processBlockCounter) {
-        convertPCMtoWAV(processedDataDumpFile, originalChannels, originalSampleRate, 32, 3);
+        convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(valid_channels),
+                        static_cast<uint32_t>(originalSampleRate), 32, 3);
     }
     if (dataDumpDir.isDirectory()) {
         juce::Array<juce::File> files;
@@ -377,6 +378,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     int numSamples = buffer.getNumSamples();
     if (processBlockCounter++ == 0) {
+        originalChannels = totalNumInputChannels;
         LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples) +
                               ", totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
                               ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels) +
@@ -412,9 +414,9 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
                                           ", for Controller Number: " + std::to_string(controllerNumber));
                 }
             } else if (controllerNumber == GAIN_MIDI_CONTROLLER_NUMBER && channel == GAIN_MDII_CHANNEL) {
-                float newGain = (static_cast<float>(controllerValue) / MAX_MIDI_CONTROL_VALUE) *
-                                    (MAX_GAIN_VALUE - MIN_GAIN_VALUE) +
-                                MIN_GAIN_VALUE;
+                float newGain = static_cast<float>(controllerValue *
+                                                       (MAX_GAIN_VALUE - MIN_GAIN_VALUE) / MAX_MIDI_CONTROL_VALUE +
+                                                   MIN_GAIN_VALUE);
                 if (newGain != gain) {
                     gain = newGain;
                     int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
@@ -431,10 +433,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     int buffer_index = 0;
     float *p_write[MAX_SUPPORT_CHANNELS] = {0};
     float *p_read[MAX_SUPPORT_CHANNELS] = {0};
-    int valid_channels = MIN(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
-    if (originalChannels != totalNumInputChannels) {
-        originalChannels = totalNumInputChannels;
-    }
+    valid_channels = MIN(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
 
     while (buffer_index != numSamples) {
         for (int channel = 0; channel < valid_channels; channel++) {
@@ -515,8 +514,8 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
         }
         gainMidiMessage = juce::MidiMessage::controllerEvent(
             GAIN_MDII_CHANNEL, GAIN_MIDI_CONTROLLER_NUMBER,
-            static_cast<int>(std::round((midiGain - MIN_GAIN_VALUE) / (MAX_GAIN_VALUE - MIN_GAIN_VALUE) *
-                                        MAX_MIDI_CONTROL_VALUE)));
+            static_cast<int>(std::round((midiGain - MIN_GAIN_VALUE) * MAX_MIDI_CONTROL_VALUE /
+                                        (MAX_GAIN_VALUE - MIN_GAIN_VALUE))));
         midiMessages.addEvent(gainMidiMessage, 0);
     }
 
