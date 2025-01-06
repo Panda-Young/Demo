@@ -11,6 +11,12 @@
 #include <iomanip>
 #include <sstream>
 
+#if JUCE_WINDOWS
+#include <Windows.h> // for GetCurrentProcessId
+#else
+#include <unistd.h>
+#endif
+
 myLogger::myLogger()
     : currentLogLevel(LOG_INFO)
 {
@@ -32,7 +38,7 @@ void myLogger::initializeLogger()
     fileLogger = std::make_unique<juce::FileLogger>(logFile, logStartMsg);
 }
 
-void myLogger::logMsg(LogLevel level, const std::string &message, const char *file, const char *function, int line)
+void myLogger::logMsg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line)
 {
     if (level < currentLogLevel || fileLogger == nullptr) {
         return;
@@ -41,13 +47,21 @@ void myLogger::logMsg(LogLevel level, const std::string &message, const char *fi
     auto now_time_t = std::chrono::system_clock::to_time_t(now);
     auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
     std::tm now_tm;
-#ifdef _WIN32
+#if JUCE_WINDOWS
     localtime_s(&now_tm, &now_time_t);
 #else
     localtime_r(&now_time_t, &now_tm);
 #endif
     std::ostringstream timestamp;
     timestamp << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S") << '.' << std::setfill('0') << std::setw(3) << now_ms.count();
+
+#if JUCE_WINDOWS
+    auto process_id = GetCurrentProcessId();
+#else
+    auto process_id = getpid();
+#endif
+    std::ostringstream process_id_str;
+    process_id_str << process_id;
 
     auto thread_id = std::this_thread::get_id();
     std::ostringstream thread_id_str;
@@ -73,8 +87,8 @@ void myLogger::logMsg(LogLevel level, const std::string &message, const char *fi
     }
 
     std::ostringstream logPrefix;
-    logPrefix << timestamp.str() << " [" << thread_id_str.str() << "] " << level_str << " "
-              << file << "@" << function << ":" << line;
+    logPrefix << timestamp.str() << " [" << process_id_str.str() << "." << thread_id_str.str() << "] "
+              << level_str << " " << file << "@" << function << ":" << line;
 
     std::string logPrefixStr = logPrefix.str();
     if (logPrefixStr.length() < 96) {
@@ -90,20 +104,25 @@ void myLogger::logMsg(LogLevel level, const std::string &message, const char *fi
     }
 }
 
-void myLogger::setLogLevel(LogLevel level)
+void myLogger::setLogLevel(LogLevel_t level)
 {
     std::lock_guard<std::mutex> lock(logMutex);
     currentLogLevel = level;
 }
 
-void log_msg(LogLevel level, const std::string &message, const char *file, const char *function, int line)
+LogLevel_t myLogger::getLogLevel() const
+{
+    return currentLogLevel;
+}
+
+void log_msg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line)
 {
     myLogger::getInstance().logMsg(level, message, file, function, line);
 }
 
 extern "C" {
 
-void log_msg_c(LogLevel level, const char *message, const char *file, const char *function, int line)
+void log_msg_c(LogLevel_t level, const char *message, const char *file, const char *function, int line)
 {
     log_msg(level, message, file, function, line);
 }

@@ -22,7 +22,7 @@ typedef enum LogLevel {
     LOG_WARN,
     LOG_ERROR,
     LOG_OFF
-} LogLevel;
+} LogLevel_t;
 
 #ifdef __cplusplus
 #include <JuceHeader.h>
@@ -39,8 +39,9 @@ public:
         return instance;
     }
 
-    void logMsg(LogLevel level, const std::string &message, const char *file, const char *function, int line);
-    void setLogLevel(LogLevel level);
+    void logMsg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line);
+    void setLogLevel(LogLevel_t level);
+    LogLevel_t getLogLevel() const;
 
 private:
     myLogger();
@@ -51,11 +52,11 @@ private:
     void initializeLogger();
 
     std::unique_ptr<juce::FileLogger> fileLogger;
-    LogLevel currentLogLevel;
+    LogLevel_t currentLogLevel;
     std::mutex logMutex;
 };
 
-void log_msg(LogLevel level, const std::string &message, const char *file, const char *function, int line);
+void log_msg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line);
 #define LOG_MSG(level, message) log_msg(level, message, __FILE_NAME__, __FUNCTION_NAME__, __LINE__)
 #endif
 
@@ -72,7 +73,7 @@ extern "C" {
         LOG_MSG_C(level, _log_temp_buf);                                       \
     } while (0)
 
-void log_msg_c(LogLevel level, const char *message, const char *file, const char *function, int line);
+void log_msg_c(LogLevel_t level, const char *message, const char *file, const char *function, int line);
 
 #ifdef __cplusplus
 }

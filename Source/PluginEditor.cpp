@@ -41,48 +41,48 @@
 //==============================================================================
 void DemoAudioProcessorEditor::initializeUIComponents()
 {
+    addAndMakeVisible(versionButton);
     versionButton.setButtonText(JucePlugin_VersionString);
     versionButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
-    versionButton.addListener(this);
-    addAndMakeVisible(versionButton);
     versionButton.setLookAndFeel(&borderlessButtonLookAndFeel);
+    versionButton.addListener(this);
 
+    addAndMakeVisible(logLevelComboBox);
     logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
     logLevelComboBox.addItem("INFO", LOG_INFO);
     logLevelComboBox.addItem("WARN", LOG_WARN);
     logLevelComboBox.addItem("ERROR", LOG_ERROR);
     logLevelComboBox.addItem("OFF", LOG_OFF);
-    addAndMakeVisible(logLevelComboBox);
     logLevelComboBox.setVisible(false);
-    logLevelComboBox.addListener(this);
     logLevelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         audioProcessor.getApvts(), "logLevel", logLevelComboBox);
+    logLevelComboBox.addListener(this);
 
-    dataDumpButton.setButtonText("Data Dump");
-    dataDumpButton.addListener(this);
     addAndMakeVisible(dataDumpButton);
+    dataDumpButton.setButtonText("Data Dump");
     dataDumpButton.setVisible(false);
     dataDumpAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getApvts(), "dataDumpEnable", dataDumpButton);
+    dataDumpButton.addListener(this);
 
-    bypassButton.setButtonText("Bypass");
-    bypassButton.addListener(this);
     addAndMakeVisible(bypassButton);
+    bypassButton.setButtonText("Bypass");
     bypassButton.setLookAndFeel(&toggleButtonWithTextInsideLookAndFeel);
     bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getApvts(), "bypassEnable", bypassButton);
+    bypassButton.addListener(this);
 
+    addAndMakeVisible(gainSlider);
     gainSlider.setSliderStyle(juce::Slider::Rotary);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
-    gainSlider.addListener(this);
-    addAndMakeVisible(gainSlider);
     gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getApvts(), "gain", gainSlider);
+    gainSlider.addListener(this);
 
+    addAndMakeVisible(&gainLabel);
     gainLabel.setText("Gain", juce::dontSendNotification);
     gainLabel.attachToComponent(&gainSlider, true);
     gainLabel.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(&gainLabel);
 }
 
 DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
@@ -100,7 +100,7 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     }
 #endif
 
-    LOG_MSG(LOG_DEBUG, "UI initialized");
+    LOG_MSG(LOG_INFO, "UI initialized");
 }
 
 DemoAudioProcessorEditor::~DemoAudioProcessorEditor()
@@ -183,7 +183,7 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
 void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
 {
     if (comboBox == &logLevelComboBox) {
-        audioProcessor.logger.setLogLevel(static_cast<LogLevel>(logLevelComboBox.getSelectedId()));
+        audioProcessor.logger.setLogLevel(static_cast<LogLevel_t>(logLevelComboBox.getSelectedId()));
         LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
     }
     audioProcessor.setAnyParamChanged(true);

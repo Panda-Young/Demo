@@ -164,7 +164,7 @@ DemoAudioProcessor::DemoAudioProcessor()
     initializeBuffers();
 
     isInitDone = true;
-    LOG_MSG(LOG_INFO, "AudioProcessor initialized successfully.");
+    LOG_MSG_CF(LOG_INFO, "AudioProcessor 0x%p initialized successfully.", this);
 }
 
 DemoAudioProcessor::~DemoAudioProcessor()
@@ -182,7 +182,7 @@ DemoAudioProcessor::~DemoAudioProcessor()
         algo_handle = nullptr;
     }
 
-    LOG_MSG(LOG_INFO, "AudioProcessor destroyed. Log stop. Closed plugins or software");
+    LOG_MSG_CF(LOG_INFO, "AudioProcessor 0x%p destroyed. Closed plugins or software", this);
 }
 
 //==============================================================================
@@ -196,10 +196,10 @@ const juce::String DemoAudioProcessor::getName() const
 bool DemoAudioProcessor::acceptsMidi() const
 {
 #if JucePlugin_WantsMidiInput
-    LOG_MSG(LOG_DEBUG, "acceptsMidi: true");
+    LOG_MSG(LOG_INFO, "acceptsMidi: true");
     return true;
 #else
-    LOG_MSG(LOG_DEBUG, "acceptsMidi: false");
+    LOG_MSG(LOG_INFO, "acceptsMidi: false");
     return false;
 #endif
 }
@@ -207,10 +207,10 @@ bool DemoAudioProcessor::acceptsMidi() const
 bool DemoAudioProcessor::producesMidi() const
 {
 #if JucePlugin_ProducesMidiOutput
-    LOG_MSG(LOG_DEBUG, "producesMidi: true");
+    LOG_MSG(LOG_INFO, "producesMidi: true");
     return true;
 #else
-    LOG_MSG(LOG_DEBUG, "producesMidi: false");
+    LOG_MSG(LOG_INFO, "producesMidi: false");
     return false;
 #endif
 }
@@ -244,14 +244,14 @@ double DemoAudioProcessor::getTailLengthSeconds() const
 
 int DemoAudioProcessor::getNumPrograms()
 {
-    LOG_MSG(LOG_DEBUG, "getNumPrograms: 1");
+    LOG_MSG(LOG_INFO, "getNumPrograms: 1");
     return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,
               // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int DemoAudioProcessor::getCurrentProgram()
 {
-    LOG_MSG(LOG_DEBUG, "getCurrentProgram: 0");
+    LOG_MSG(LOG_INFO, "getCurrentProgram: 0");
     return 0;
 }
 
@@ -278,32 +278,37 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    originalSampleRate = sampleRate;
-    originalChannels = getTotalNumInputChannels();
-    LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
-                          ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
-                          ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " milliseconds");
+    if (!toReleaseResources) {
+        originalSampleRate = sampleRate;
+        originalChannels = getTotalNumInputChannels();
+        LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
+                              ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
+                              ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " milliseconds");
 
-    setLatencySamples(block_size);
-    LOG_MSG(LOG_INFO, "set latency samples: " + std::to_string(block_size));
-    processBlockCounter = 0;
+        setLatencySamples(block_size);
+        LOG_MSG(LOG_INFO, "set latency samples: " + std::to_string(block_size));
+        processBlockCounter = 0;
 
-    juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
-    dataDumpDir = UserDesktop.getChildFile(JucePlugin_Name + juce::String("_DataDump"));
-    dataDumpDir.createDirectory();
+        juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
+        dataDumpDir = UserDesktop.getChildFile(JucePlugin_Name + juce::String("_DataDump"));
+        dataDumpDir.createDirectory();
 
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-    char timeStr[20] = {0};
-    std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H%M%S_", std::localtime(&now_time));
-    juce::String TimeStamp = juce::String(timeStr);
-    processedDataDumpFile = dataDumpDir.getChildFile(TimeStamp + "processed.pcm");
-    if (processedDataDumpFile.create().wasOk()) {
-        LOG_MSG(LOG_DEBUG, "Created data dump file: \"" +
-                               processedDataDumpFile.getFullPathName().toStdString() + "\"");
+        auto now = std::chrono::system_clock::now();
+        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+        char timeStr[20] = {0};
+        std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H%M%S_", std::localtime(&now_time));
+        juce::String TimeStamp = juce::String(timeStr);
+        processedDataDumpFile = dataDumpDir.getChildFile(TimeStamp + "processed.pcm");
+        if (processedDataDumpFile.create().wasOk()) {
+            LOG_MSG(LOG_DEBUG, "Created data dump file: \"" +
+                                   processedDataDumpFile.getFullPathName().toStdString() + "\"");
+        } else {
+            LOG_MSG(LOG_ERROR, "Failed to create data dump file: \"" +
+                                   processedDataDumpFile.getFullPathName().toStdString() + "\"");
+        }
+        toReleaseResources = true;
     } else {
-        LOG_MSG(LOG_ERROR, "Failed to create data dump file: \"" +
-                               processedDataDumpFile.getFullPathName().toStdString() + "\"");
+        LOG_MSG(LOG_WARN, "prepareToPlay: nothing to prepare");
     }
 }
 
@@ -311,26 +316,30 @@ void DemoAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
-    if (processBlockCounter) {
-        convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(valid_channels),
-                        static_cast<uint32_t>(originalSampleRate), 32, 3);
-    }
-    if (dataDumpDir.isDirectory()) {
-        juce::Array<juce::File> files;
-        dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
-        for (auto &file : files) {
-            if (file.getSize() == 0) {
-                file.deleteFile();
+    if (toReleaseResources) {
+        if (processBlockCounter) {
+            convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(valid_channels),
+                            static_cast<uint32_t>(originalSampleRate), 32, 3);
+        }
+        if (dataDumpDir.isDirectory()) {
+            juce::Array<juce::File> files;
+            dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
+            for (auto &file : files) {
+                if (file.getSize() == 0) {
+                    file.deleteFile();
+                }
+            }
+            dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
+            if (files.size() == 0) {
+                dataDumpDir.deleteRecursively();
             }
         }
-        dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
-        if (files.size() == 0) {
-            dataDumpDir.deleteRecursively();
-        }
+        processBlockCounter = 0;
+        toReleaseResources = false;
+        LOG_MSG(LOG_INFO, "released Resources");
+    } else {
+        LOG_MSG(LOG_WARN, "nothing to release");
     }
-    processBlockCounter = 0;
-
-    LOG_MSG(LOG_INFO, "released Resources");
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -345,7 +354,7 @@ bool DemoAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) cons
         layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-    // This checks if the input layout matches the output layout
+        // This checks if the input layout matches the output layout
 #if !JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
@@ -485,15 +494,31 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
     if (tree.isValid() && tree.hasType("Parameters")) {
         apvts.state = tree;
         LOG_MSG(LOG_INFO, "restore parameters from memory block:\n" + apvts.state.toXmlString().toStdString());
-        bypassEnable = static_cast<bool>(apvts.getRawParameterValue("bypassEnable")->load());
-        dataDumpEnable = static_cast<bool>(apvts.getRawParameterValue("dataDumpEnable")->load());
-        gain = apvts.getRawParameterValue("gain")->load();
-        int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
-        if (ret != 0) {
-            LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
+        int lastLogLevelValue = static_cast<int>(apvts.getRawParameterValue("logLevel")->load() + 1);
+        if (logger.getLogLevel() != static_cast<LogLevel_t>(lastLogLevelValue)) {
+            logger.setLogLevel(static_cast<LogLevel_t>(lastLogLevelValue));
+            LOG_MSG(LOG_INFO, "Log level has been set to " +
+                                  std::to_string(apvts.getRawParameterValue("logLevel")->load()) + " by last state");
         }
-        int logLevelValue = static_cast<int>(apvts.getRawParameterValue("logLevel")->load() + 1);
-        logger.setLogLevel(static_cast<LogLevel>(logLevelValue));
+        bool lastDataDumpEnableState = static_cast<bool>(apvts.getRawParameterValue("dataDumpEnable")->load());
+        if (dataDumpEnable != lastDataDumpEnableState) {
+            dataDumpEnable = lastDataDumpEnableState;
+            LOG_MSG(LOG_INFO, "Data dump is " + std::string(dataDumpEnable ? "enabled" : "disabled") + " by last state");
+        }
+        bool lastBypassEnableState = static_cast<bool>(apvts.getRawParameterValue("bypassEnable")->load());
+        if (bypassEnable != lastBypassEnableState) {
+            bypassEnable = lastBypassEnableState;
+            LOG_MSG(LOG_INFO, "Bypass is " + std::string(bypassEnable ? "enabled" : "disabled") + " by last state");
+        }
+        float lastGainValue = apvts.getRawParameterValue("gain")->load();
+        if (gain != lastGainValue) {
+            gain = lastGainValue;
+            LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(gain) + " dB by last state");
+            int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
+            if (ret != 0) {
+                LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
+            }
+        }
     } else {
         if (!tree.hasType("Parameters")) {
             LOG_MSG(LOG_DEBUG, "Read from memory block: " + tree.toXmlString().toStdString());

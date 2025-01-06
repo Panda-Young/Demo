@@ -62,15 +62,15 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSa
 {
     std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
-                               ". Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\". Reason: " + std::string(strerror(errno)));
         return;
     }
     outFile.write(reinterpret_cast<const char *>(data), numSamples * sizeof(float));
     outFile.close();
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + pcmFile.getFullPathName().toStdString() +
-                               ". Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to write data to file: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\". Reason: " + std::string(strerror(errno)));
     }
 }
 
@@ -78,8 +78,8 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft, const fl
 {
     std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
-                               ". Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\". Reason: " + std::string(strerror(errno)));
         return;
     }
     for (size_t i = 0; i < numSamples; ++i) {
@@ -88,8 +88,8 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft, const fl
     }
     outFile.close();
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + pcmFile.getFullPathName().toStdString() +
-                               ". Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to write data to file: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\". Reason: " + std::string(strerror(errno)));
     }
 }
 
@@ -97,8 +97,8 @@ void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float> &bu
 {
     std::ofstream outFile(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::app);
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
-                               ". Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\". Reason: " + std::string(strerror(errno)));
         return;
     }
 
@@ -109,8 +109,8 @@ void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float> &bu
     }
     outFile.close();
     if (!outFile) {
-        LOG_MSG(LOG_ERROR, "Failed to write data to file: " + pcmFile.getFullPathName().toStdString() +
-                               ". Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to write data to file: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\". Reason: " + std::string(strerror(errno)));
     }
 }
 
@@ -118,19 +118,19 @@ void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t S
                      uint16_t bits_per_sam, uint16_t audioFormat)
 {
     if (!pcmFile.existsAsFile()) {
-        LOG_MSG(LOG_ERROR, "PCM file does not exist: " + pcmFile.getFullPathName().toStdString());
+        LOG_MSG(LOG_WARN, "PCM file does not exist: \"" + pcmFile.getFullPathName().toStdString() + "\"");
         return;
     }
     if (pcmFile.getSize() == 0) {
         if (!pcmFile.deleteFile()) {
-            LOG_MSG(LOG_ERROR, "Failed to delete empty PCM file: " + pcmFile.getFullPathName().toStdString());
+            LOG_MSG(LOG_ERROR, "Failed to delete empty PCM file: \"" + pcmFile.getFullPathName().toStdString() + "\"");
         }
         return;
     }
     std::ifstream pcmFileStream(pcmFile.getFullPathName().toStdString(), std::ios::binary | std::ios::in);
     if (!pcmFileStream) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for reading: " + pcmFile.getFullPathName().toStdString() +
-                               ". Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to open file for reading: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\". Reason: " + std::string(strerror(errno)));
         return;
     }
 
@@ -138,8 +138,8 @@ void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t S
     newFilePath.replace(newFilePath.find(".pcm"), 4, ".wav");
     std::ofstream wavFile(newFilePath, std::ios::binary | std::ios::out);
     if (!wavFile) {
-        LOG_MSG(LOG_ERROR, "Failed to open file for writing: " + pcmFile.getFullPathName().toStdString() +
-                               ".wav. Reason: " + std::string(strerror(errno)));
+        LOG_MSG(LOG_ERROR, "Failed to open file for writing: \"" + pcmFile.getFullPathName().toStdString() +
+                               "\".wav. Reason: " + std::string(strerror(errno)));
         return;
     }
 
@@ -183,7 +183,7 @@ void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t S
 
     // Delete PCM file
     if (!pcmFile.deleteFile()) {
-        LOG_MSG(LOG_ERROR, "Failed to delete PCM file: " + pcmFile.getFullPathName().toStdString());
+        LOG_MSG(LOG_ERROR, "Failed to delete PCM file: \"" + pcmFile.getFullPathName().toStdString() + "\"");
     }
 }
 
@@ -378,7 +378,7 @@ RegType_t checkRegType()
                 return NoReg;
             }
         }
-        LOG_MSG(LOG_INFO, "License file: " + file.getFullPathName().toStdString() + " does not exist.");
+        LOG_MSG(LOG_INFO, "License file: \"" + file.getFullPathName().toStdString() + "\" does not exist.");
         return NoReg;
     }
 }
@@ -402,7 +402,7 @@ RegType_t regSoftware(juce::String strLicense)
             out.write(strLicense.getCharPointer(), strLicense.length());
             out.flush();
             if (file.exists()) {
-                LOG_MSG(LOG_INFO, "Write VIP license to file: " + file.getFullPathName().toStdString());
+                LOG_MSG(LOG_INFO, "Write VIP license to file: \"" + file.getFullPathName().toStdString() + "\"");
                 return VIPReg;
             } else {
                 LOG_MSG(LOG_ERROR, "Failed to write VIP license to file.");
@@ -421,7 +421,7 @@ RegType_t regSoftware(juce::String strLicense)
                 out.write(strLicense.getCharPointer(), strLicense.length());
                 out.flush();
                 if (file.exists()) {
-                    LOG_MSG(LOG_INFO, "Write User license to file: " + file.getFullPathName().toStdString());
+                    LOG_MSG(LOG_INFO, "Write User license to file: \"" + file.getFullPathName().toStdString() + "\"");
                     return UserReg;
                 } else {
                     LOG_MSG(LOG_ERROR, "Failed to write User license to file.");

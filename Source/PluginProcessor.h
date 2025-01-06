@@ -103,6 +103,7 @@ private:
     bool dataDumpEnable = false;
     bool isLicenseValid = false;
     bool isInitDone = false;
+    bool toReleaseResources = false;
 
     uint64_t processBlockCounter = 0;
     uint64_t algoFrameCounter = 0;
