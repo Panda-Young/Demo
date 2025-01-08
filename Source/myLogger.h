@@ -41,7 +41,9 @@ public:
 
     void logMsg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line);
     void setLogLevel(LogLevel_t level);
-    LogLevel_t getLogLevel() const;
+    LogLevel_t getLogLevel() const { return currentLogLevel; }
+    juce::File getLogFile() const { return logFile; }
+    juce::File getTempDir() const { return tempDir; }
 
 private:
     myLogger();
@@ -52,6 +54,7 @@ private:
     void initializeLogger();
 
     std::unique_ptr<juce::FileLogger> fileLogger;
+    juce::File tempDir, logFile;
     LogLevel_t currentLogLevel;
     std::mutex logMutex;
 };

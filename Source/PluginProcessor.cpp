@@ -274,10 +274,38 @@ void DemoAudioProcessor::changeProgramName(int index, const juce::String &newNam
 }
 
 //==============================================================================
+class OpenLogCallback : public juce::ModalComponentManager::Callback
+{
+public:
+    void modalStateFinished(int returnValue) override
+    {
+        juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+        if (tempDir.isDirectory()) {
+            tempDir.startAsProcess();
+        }
+        juce::File logFile = tempDir.getChildFile(JucePlugin_Name "_VST_Plugin.log");
+        if (logFile.existsAsFile()) {
+            logFile.startAsProcess();
+        }
+    }
+};
+
 void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    if (!isInitDone) {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Initialization Failed",
+            "Failed to initialize the plugin! "
+            "Please check the last part of the log file: \n" + logger.getLogFile().getFullPathName() + "\n"
+            "You can also send the log file to the developers for further assistance.",
+            "OK",
+            nullptr,
+            new OpenLogCallback());
+    }
+
     if (!toReleaseResources) {
         originalSampleRate = sampleRate;
         originalChannels = getTotalNumInputChannels();

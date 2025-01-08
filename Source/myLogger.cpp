@@ -29,10 +29,10 @@ myLogger::~myLogger()
 
 void myLogger::initializeLogger()
 {
-    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+    tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
     char logFileName[64] = JucePlugin_Name;
     strcat(logFileName, "_VST_Plugin.log");
-    juce::File logFile = tempDir.getChildFile(juce::String(logFileName));
+    logFile = tempDir.getChildFile(juce::String(logFileName));
     char logStartMsg[128] = {0};
     sprintf(logStartMsg, "%s VST Plugin %s", JucePlugin_Name, JucePlugin_VersionString);
     fileLogger = std::make_unique<juce::FileLogger>(logFile, logStartMsg);
@@ -108,11 +108,6 @@ void myLogger::setLogLevel(LogLevel_t level)
 {
     std::lock_guard<std::mutex> lock(logMutex);
     currentLogLevel = level;
-}
-
-LogLevel_t myLogger::getLogLevel() const
-{
-    return currentLogLevel;
 }
 
 void log_msg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line)
