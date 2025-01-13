@@ -46,6 +46,7 @@ void DemoAudioProcessorEditor::initializeUIComponents()
     versionButton.setColour(juce::TextButton::buttonColourId, juce::Colour::fromRGBA(0, 0, 0, 0)); // Set to transparent
     versionButton.setLookAndFeel(&borderlessButtonLookAndFeel);
     versionButton.addListener(this);
+    // Add listener after initialization is complete to avoid triggering the listener
 
     addAndMakeVisible(logLevelComboBox);
     logLevelComboBox.addItem("DEBUG", LOG_DEBUG);
@@ -169,12 +170,13 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
 void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
 {
     if (slider == &gainSlider) {
-        LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(audioProcessor.getGainValue()) + " dB");
         audioProcessor.setGainValue(static_cast<float>(gainSlider.getValue()));
         float gainValue = audioProcessor.getGainValue();
         int ret = algo_set_param(audioProcessor.getAlgoHandle(), ALGO_PARAM2, &gainValue, (int)sizeof(float));
         if (ret != E_OK) {
             LOG_MSG(LOG_ERROR, "algo_set_param failed. ret = " + std::to_string(ret));
+        } else {
+            LOG_MSG(LOG_INFO, "Gain value changed to " + std::to_string(gainValue) + " dB");
         }
     }
     audioProcessor.setAnyParamChanged(true);

@@ -16,6 +16,7 @@
 #include <juce_cryptography/juce_cryptography.h> // Include this for MD5
 #include <regex>                                 // Include this for std::regex, std::smatch
 #include <sstream>                               // Include this for std::ostringstream, std::istringstream
+#include <cstring>                               // Include this for std::strrchr
 
 int getPluginType()
 {
@@ -301,7 +302,7 @@ bool isLicenseTimeValid(const juce::String &license)
 
     char dateStr[9] = {0};
     for (int i = 0; i < 8; i++) {
-        dateStr[i] = dateString[i] - 17; // Upper case character to integer
+        dateStr[i] = static_cast<char>(dateString[i] - 17); // Upper case character to integer
     }
 
     std::tm licenseDate = {};

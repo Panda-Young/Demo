@@ -77,7 +77,7 @@ bool get_cpu_id(std::string &cpu_id)
     // Remove spaces, \r, \n
     {
         int j = 0;
-        for (int i = 0; i < strlen(szBuffer); i++) {
+        for (size_t i = 0; i < strlen(szBuffer); i++) {
             if (szBuffer[i] != ' ' && szBuffer[i] != '\n' && szBuffer[i] != '\r') {
                 cpu_id += szBuffer[i];
                 j++;

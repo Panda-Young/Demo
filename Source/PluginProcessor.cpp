@@ -17,7 +17,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX_GAIN_VALUE 20.0f
 #define MIN_GAIN_VALUE -20.0f
 
@@ -277,15 +276,23 @@ void DemoAudioProcessor::changeProgramName(int index, const juce::String &newNam
 class OpenLogCallback : public juce::ModalComponentManager::Callback
 {
 public:
-    void modalStateFinished(int returnValue) override
+    void modalStateFinished(int /*returnValue*/) override
     {
         juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
         if (tempDir.isDirectory()) {
-            tempDir.startAsProcess();
+            if (tempDir.startAsProcess()) {
+                LOG_MSG(LOG_DEBUG, "Opened the temp directory: " + tempDir.getFullPathName().toStdString());
+            } else {
+                LOG_MSG(LOG_ERROR, "Failed to open the temp directory: " + tempDir.getFullPathName().toStdString());
+            }
         }
         juce::File logFile = tempDir.getChildFile(JucePlugin_Name "_VST_Plugin.log");
         if (logFile.existsAsFile()) {
-            logFile.startAsProcess();
+            if (logFile.startAsProcess()) {
+                LOG_MSG(LOG_DEBUG, "Opened the log file: " + logFile.getFullPathName().toStdString());
+            } else {
+                LOG_MSG(LOG_ERROR, "Failed to open the log file: " + logFile.getFullPathName().toStdString());
+            }
         }
     }
 };
@@ -319,7 +326,11 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
         juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
         dataDumpDir = UserDesktop.getChildFile(JucePlugin_Name + juce::String("_DataDump"));
-        dataDumpDir.createDirectory();
+        if (dataDumpDir.createDirectory()) {
+            LOG_MSG(LOG_DEBUG, "Created data dump folder: \"" + dataDumpDir.getFullPathName().toStdString() + "\"");
+        } else {
+            LOG_MSG(LOG_ERROR, "Failed to create data dump folder: \"" + dataDumpDir.getFullPathName().toStdString() + "\"");
+        }
 
         auto now = std::chrono::system_clock::now();
         std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -354,12 +365,24 @@ void DemoAudioProcessor::releaseResources()
             dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
             for (auto &file : files) {
                 if (file.getSize() == 0) {
-                    file.deleteFile();
+                    if (file.deleteFile()) {
+                        LOG_MSG_CF(LOG_DEBUG, "The file \"%s\" is empty and deleted successfully.",
+                               file.getFullPathName().toRawUTF8());
+                    } else {
+                        LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty file \"%s\"",
+                                file.getFullPathName().toRawUTF8());
+                    }
                 }
             }
             dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
             if (files.size() == 0) {
-                dataDumpDir.deleteRecursively();
+                if (dataDumpDir.deleteRecursively()) {
+                    LOG_MSG_CF(LOG_DEBUG, "The folder \"%s\" is empty and deleted successfully.",
+                           dataDumpDir.getFullPathName().toRawUTF8());
+                } else {
+                    LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty folder \"%s\"",
+                            dataDumpDir.getFullPathName().toRawUTF8());
+                }
             }
         }
         processBlockCounter = 0;
@@ -417,7 +440,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     int buffer_index = 0;
     float *p_write[MAX_SUPPORT_CHANNELS] = {0};
     float *p_read[MAX_SUPPORT_CHANNELS] = {0};
-    valid_channels = MIN(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
+    valid_channels = juce::jmin(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
 
     while (buffer_index != numSamples) {
         for (int channel = 0; channel < valid_channels; channel++) {
@@ -425,8 +448,8 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
             p_read[channel] = read_buf[channel].get();
         }
         int n_samples_to_write = 0;
-        n_samples_to_write = MIN(numSamples - buffer_index, block_size - write_index);
-        n_samples_to_write = MIN(n_samples_to_write, block_size - read_index);
+        n_samples_to_write = juce::jmin(numSamples - buffer_index, block_size - write_index);
+        n_samples_to_write = juce::jmin(n_samples_to_write, block_size - read_index);
         for (int sample = 0; sample < n_samples_to_write; sample++) {
             for (int channel = 0; channel < valid_channels; channel++) {
                 write_buf[channel][write_index + sample] = buffer.getSample(channel, buffer_index + sample);
@@ -541,11 +564,6 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
         float lastGainValue = apvts.getRawParameterValue("gain")->load();
         if (gain != lastGainValue) {
             gain = lastGainValue;
-            LOG_MSG(LOG_INFO, "Gain has been set to " + std::to_string(gain) + " dB by last state");
-            int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
-            if (ret != 0) {
-                LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
-            }
         }
     } else {
         if (!tree.hasType("Parameters")) {
