@@ -228,7 +228,7 @@ juce::String getRegSequence(const juce::String strSerial, RegType_t type)
         new_array = byte_array.replaceSection(5, 0, "U");
         break;
     case VIPReg:
-        new_array = byte_array.replaceSection(5, 0, "P");
+        new_array = byte_array.replaceSection(5, 0, "V");
         break;
     default:
         break;
@@ -346,7 +346,7 @@ RegType_t checkRegType()
                         LOG_MSG(LOG_INFO, "User license is valid.");
                         return UserReg;
                     } else {
-                        LOG_MSG(LOG_INFO, "User license time expired.");
+                        LOG_MSG(LOG_WARN, "User license time expired.");
                         return NoReg;
                     }
                 } else {
@@ -371,7 +371,7 @@ RegType_t checkRegType()
                     LOG_MSG(LOG_INFO, "Temp license is valid.");
                     return UserReg;
                 } else {
-                    LOG_MSG(LOG_INFO, "Temp license time expired.");
+                    LOG_MSG(LOG_WARN, "Temp license time expired.");
                     return NoReg;
                 }
             } else {
@@ -429,7 +429,7 @@ RegType_t regSoftware(juce::String strLicense)
                     return NoReg;
                 }
             } else {
-                LOG_MSG(LOG_ERROR, "User license time expired.");
+                LOG_MSG(LOG_WARN, "User license time expired.");
                 return NoReg;
             }
         } else {

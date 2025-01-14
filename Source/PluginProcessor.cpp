@@ -63,15 +63,15 @@ public:
 void DemoAudioProcessor::initializeBuffers()
 {
     for (int channel = 0; channel < MAX_SUPPORT_CHANNELS; channel++) {
-        write_buf[channel] = std::make_unique<float[]>(block_size);
-        if (!write_buf[channel]) {
-            LOG_MSG(LOG_ERROR, "Failed to allocate memory for write_buf[" + std::to_string(channel) + "]");
+        writeBuf[channel] = std::make_unique<float[]>(blockSize);
+        if (!writeBuf[channel]) {
+            LOG_MSG(LOG_ERROR, "Failed to allocate memory for writeBuf[" + std::to_string(channel) + "]");
             isInitDone = false;
             return;
         }
-        read_buf[channel] = std::make_unique<float[]>(block_size);
-        if (!read_buf[channel]) {
-            LOG_MSG(LOG_ERROR, "Failed to allocate memory for read_buf[" + std::to_string(channel) + "]");
+        readBuf[channel] = std::make_unique<float[]>(blockSize);
+        if (!readBuf[channel]) {
+            LOG_MSG(LOG_ERROR, "Failed to allocate memory for readBuf[" + std::to_string(channel) + "]");
             isInitDone = false;
             return;
         }
@@ -134,7 +134,7 @@ DemoAudioProcessor::DemoAudioProcessor()
         options.useNativeTitleBar = true;
         options.resizable = false;
 
-        options.content->setSize(400, 200);
+        options.content->setSize(420, 200);
         options.launchAsync();
 
     } else {
@@ -169,11 +169,11 @@ DemoAudioProcessor::DemoAudioProcessor()
 DemoAudioProcessor::~DemoAudioProcessor()
 {
     for (int channel = 0; channel < MAX_SUPPORT_CHANNELS; channel++) {
-        if (write_buf[channel]) {
-            write_buf[channel].reset();
+        if (writeBuf[channel]) {
+            writeBuf[channel].reset();
         }
-        if (read_buf[channel]) {
-            read_buf[channel].reset();
+        if (readBuf[channel]) {
+            readBuf[channel].reset();
         }
     }
     if (algo_handle != nullptr) {
@@ -236,7 +236,7 @@ double DemoAudioProcessor::getTailLengthSeconds() const
         LOG_MSG(LOG_INFO, "getTailLengthSeconds: 0");
         return 0;
     }
-    double tailLength = static_cast<double>(block_size) / originalSampleRate;
+    double tailLength = static_cast<double>(blockSize) / originalSampleRate;
     LOG_MSG(LOG_INFO, "getTailLengthSeconds: " + std::to_string(tailLength));
     return tailLength;
 }
@@ -306,8 +306,9 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
             juce::AlertWindow::WarningIcon,
             "Initialization Failed",
             "Failed to initialize the plugin! "
-            "Please check the last part of the log file: \n" + logger.getLogFile().getFullPathName() + "\n"
-            "You can also send the log file to the developers for further assistance.",
+            "Please check the last part of the log file: \n" +
+                logger.getLogFile().getFullPathName() + "\n"
+                                                        "You can also send the log file to the developers for further assistance.",
             "OK",
             nullptr,
             new OpenLogCallback());
@@ -320,8 +321,8 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
                               ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
                               ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " milliseconds");
 
-        setLatencySamples(block_size);
-        LOG_MSG(LOG_INFO, "set latency samples: " + std::to_string(block_size));
+        setLatencySamples(blockSize);
+        LOG_MSG(LOG_INFO, "set latency samples: " + std::to_string(blockSize));
         processBlockCounter = 0;
 
         juce::File UserDesktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
@@ -357,7 +358,7 @@ void DemoAudioProcessor::releaseResources()
     // spare memory, etc.
     if (toReleaseResources) {
         if (processBlockCounter) {
-            convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(valid_channels),
+            convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(validChannels),
                             static_cast<uint32_t>(originalSampleRate), 32, 3);
         }
         if (dataDumpDir.isDirectory()) {
@@ -367,10 +368,10 @@ void DemoAudioProcessor::releaseResources()
                 if (file.getSize() == 0) {
                     if (file.deleteFile()) {
                         LOG_MSG_CF(LOG_DEBUG, "The file \"%s\" is empty and deleted successfully.",
-                               file.getFullPathName().toRawUTF8());
+                                   file.getFullPathName().toRawUTF8());
                     } else {
                         LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty file \"%s\"",
-                                file.getFullPathName().toRawUTF8());
+                                   file.getFullPathName().toRawUTF8());
                     }
                 }
             }
@@ -378,10 +379,10 @@ void DemoAudioProcessor::releaseResources()
             if (files.size() == 0) {
                 if (dataDumpDir.deleteRecursively()) {
                     LOG_MSG_CF(LOG_DEBUG, "The folder \"%s\" is empty and deleted successfully.",
-                           dataDumpDir.getFullPathName().toRawUTF8());
+                               dataDumpDir.getFullPathName().toRawUTF8());
                 } else {
                     LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty folder \"%s\"",
-                            dataDumpDir.getFullPathName().toRawUTF8());
+                               dataDumpDir.getFullPathName().toRawUTF8());
                 }
             }
         }
@@ -405,7 +406,7 @@ bool DemoAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) cons
         layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-        // This checks if the input layout matches the output layout
+    // This checks if the input layout matches the output layout
 #if !JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
@@ -428,6 +429,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+    validChannels = juce::jmin(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
     int numSamples = buffer.getNumSamples();
     if (processBlockCounter++ == 0) {
         originalChannels = totalNumInputChannels;
@@ -437,63 +439,61 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
                               ", about " + std::to_string(numSamples * 1000.0f / originalSampleRate) + " milliseconds");
     }
 
-    int buffer_index = 0;
-    float *p_write[MAX_SUPPORT_CHANNELS] = {0};
-    float *p_read[MAX_SUPPORT_CHANNELS] = {0};
-    valid_channels = juce::jmin(totalNumInputChannels, MAX_SUPPORT_CHANNELS);
-
-    while (buffer_index != numSamples) {
-        for (int channel = 0; channel < valid_channels; channel++) {
-            p_write[channel] = write_buf[channel].get();
-            p_read[channel] = read_buf[channel].get();
+    int bufferIndex = 0;
+    float *pWrite[MAX_SUPPORT_CHANNELS] = {0};
+    float *pRead[MAX_SUPPORT_CHANNELS] = {0};
+    while (bufferIndex != numSamples) {
+        for (int channel = 0; channel < validChannels; channel++) {
+            pWrite[channel] = writeBuf[channel].get();
+            pRead[channel] = readBuf[channel].get();
         }
-        int n_samples_to_write = 0;
-        n_samples_to_write = juce::jmin(numSamples - buffer_index, block_size - write_index);
-        n_samples_to_write = juce::jmin(n_samples_to_write, block_size - read_index);
-        for (int sample = 0; sample < n_samples_to_write; sample++) {
-            for (int channel = 0; channel < valid_channels; channel++) {
-                write_buf[channel][write_index + sample] = buffer.getSample(channel, buffer_index + sample);
-            }
+        int numSamplesWrite = 0;
+        numSamplesWrite = juce::jmin(numSamples - bufferIndex, blockSize - writeIndex);
+        numSamplesWrite = juce::jmin(numSamplesWrite, blockSize - readIndex);
+        for (int channel = 0; channel < validChannels; channel++) {
+            std::memcpy(pWrite[channel] + writeIndex,
+                        buffer.getReadPointer(channel, bufferIndex),
+                        numSamplesWrite * sizeof(float));
         }
-        write_index += n_samples_to_write;
-        if (write_index == block_size) {
-            auto frameStart = juce::Time::getMillisecondCounterHiRes();
+        writeIndex += numSamplesWrite;
+        if (writeIndex == blockSize) {
             if (bypassEnable) {
                 // do nothing or copy the input buffer to the output buffer
             } else {
-                for (int channel = 0; channel < valid_channels; channel++) {
-                    int ret = algo_process(algo_handle, write_buf[channel].get(), write_buf[channel].get(), block_size);
+                auto frameStart = juce::Time::getMillisecondCounterHiRes();
+                for (int channel = 0; channel < validChannels; channel++) {
+                    int ret = algo_process(algo_handle, pWrite[channel], pWrite[channel], blockSize);
                     if (ret != 0) {
                         LOG_MSG(LOG_ERROR, "Failed to algo_process. ret = " + std::to_string(ret));
                     }
                 }
+                auto frameStop = juce::Time::getMillisecondCounterHiRes();
+                LOG_MSG(LOG_DEBUG, "algo_process frame " + std::to_string(algoFrameCounter++) +
+                                       " elapsed time: " + std::to_string(frameStop - frameStart) + " ms");
                 if (dataDumpEnable) {
-                    if (valid_channels == 1) {
-                        dumpFloatPCMData(processedDataDumpFile, write_buf[0].get(), block_size);
-                    } else if (valid_channels == MAX_SUPPORT_CHANNELS) {
-                        dumpFloatPCMData(processedDataDumpFile, write_buf[0].get(), write_buf[1].get(), block_size);
+                    if (validChannels == 1) {
+                        dumpFloatPCMData(processedDataDumpFile, writeBuf[0].get(), blockSize);
+                    } else if (validChannels == MAX_SUPPORT_CHANNELS) {
+                        dumpFloatPCMData(processedDataDumpFile, writeBuf[0].get(), writeBuf[1].get(), blockSize);
                     }
                 }
             }
-            auto frameStop = juce::Time::getMillisecondCounterHiRes();
-            LOG_MSG(LOG_DEBUG, "algo_process frame " + std::to_string(algoFrameCounter++) +
-                                   " elapsed time: " + std::to_string(frameStop - frameStart) + " ms");
         }
-        for (int sample = 0; sample < n_samples_to_write; sample++) {
-            for (int channel = 0; channel < valid_channels; channel++) {
-                buffer.setSample(channel, buffer_index + sample, read_buf[channel][read_index + sample]);
+        for (int channel = 0; channel < validChannels; channel++) {
+            std::memcpy(buffer.getWritePointer(channel, bufferIndex),
+                        pRead[channel] + readIndex,
+                        numSamplesWrite * sizeof(float));
+        }
+        bufferIndex += numSamplesWrite;
+        if (writeIndex == blockSize) {
+            for (int channel = 0; channel < validChannels; channel++) {
+                writeBuf[channel].swap(readBuf[channel]);
             }
+            writeIndex = 0;
         }
-        buffer_index += n_samples_to_write;
-        if (write_index == block_size) {
-            for (int channel = 0; channel < valid_channels; channel++) {
-                write_buf[channel].swap(read_buf[channel]);
-            }
-            write_index = 0;
-        }
-        read_index += n_samples_to_write;
-        if (read_index == block_size) {
-            read_index = 0;
+        readIndex += numSamplesWrite;
+        if (readIndex == blockSize) {
+            readIndex = 0;
         }
     }
 

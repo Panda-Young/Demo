@@ -108,19 +108,19 @@ private:
     uint64_t processBlockCounter = 0;
     uint64_t algoFrameCounter = 0;
 
-    const int block_size = 2048;
+    const int blockSize = 2048;
     void *algo_handle = nullptr;
     float gain = 0.0f;
 
-    std::unique_ptr<float[]> write_buf[MAX_SUPPORT_CHANNELS];
-    std::unique_ptr<float[]> read_buf[MAX_SUPPORT_CHANNELS];
-    int write_index = 0;
-    int read_index = 0;
+    std::unique_ptr<float[]> writeBuf[MAX_SUPPORT_CHANNELS];
+    std::unique_ptr<float[]> readBuf[MAX_SUPPORT_CHANNELS];
+    int writeIndex = 0;
+    int readIndex = 0;
     juce::File dataDumpDir, processedDataDumpFile;
 
     double originalSampleRate = 0;
     int originalChannels = 0;
-    int valid_channels = 0;
+    int validChannels = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)
 };
