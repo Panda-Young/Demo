@@ -191,3 +191,18 @@ void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
     }
     audioProcessor.setAnyParamChanged(true);
 }
+
+void DemoAudioProcessorEditor::processorParamChanged(const juce::String &parameterID, float newValue)
+{
+    if (parameterID == "logLevel") {
+        logLevelComboBox.setSelectedId(static_cast<int>(newValue) + 1, juce::dontSendNotification);
+    } else if (parameterID == "dataDumpEnable") {
+        dataDumpButton.setToggleState(newValue > 0.5f, juce::dontSendNotification);
+    } else if (parameterID == "bypassEnable") {
+        bypassButton.setToggleState(newValue > 0.5f, juce::dontSendNotification);
+    } else if (parameterID == "gain") {
+        gainSlider.setValue(newValue, juce::dontSendNotification);
+    } else { // program should never reach here
+        LOG_MSG(LOG_WARN, "Unknown parameter changed");
+    }
+}

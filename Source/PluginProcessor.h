@@ -92,8 +92,7 @@ public:
     {
     public:
         virtual ~Listener() = default;
-        virtual void bypassEnableChanged(bool newState) = 0;
-        virtual void gainValueChanged(float newValue) = 0;
+        virtual void processorParamChanged(const juce::String &parameterID, float newValue) = 0;
     };
 
     void addListener(Listener *listener) { listeners.add(listener); }
@@ -137,14 +136,9 @@ private:
     int valid_channels = 0;
 
     juce::ListenerList<Listener> listeners;
-
-    void notifyBypassEnableChanged()
+    void notifyProcessorParamChanged(const juce::String &parameterID, float newValue)
     {
-        listeners.call([this](Listener &l) { l.bypassEnableChanged(bypassEnable); });
-    }
-    void notifyGainValueChanged()
-    {
-        listeners.call([this](Listener &l) { l.gainValueChanged(gain); });
+        listeners.call([parameterID, newValue](Listener &l) { l.processorParamChanged(parameterID, newValue); });
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DemoAudioProcessor)

@@ -353,7 +353,7 @@ bool DemoAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) cons
         layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-    // This checks if the input layout matches the output layout
+        // This checks if the input layout matches the output layout
 #if !JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
@@ -395,35 +395,32 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
             LOG_MSG(LOG_DEBUG, "MIDI Controller Number: " + std::to_string(controllerNumber) +
                                    ", Controller Value: " + std::to_string(controllerValue) +
                                    ", Channel: " + std::to_string(channel));
-            if (controllerNumber == BYPASS_MDII_CONTROLLER_NUMBER) {
-                if (controllerValue == BYPASS_ENABLE_MDII_CONTROLLER_VALUE && channel == BYPASS_MDII_CHANNEL) {
-                    if (!bypassEnable) {
-                        bypassEnable = true;
-                        notifyBypassEnableChanged();
-                        LOG_MSG(LOG_INFO, "Bypass is enabled by MIDI Controller");
-                    }
-                } else if (controllerValue == BYPASS_DISABLE_MDII_CONTROLLER_VALUE && channel == BYPASS_MDII_CHANNEL) {
-                    if (bypassEnable) {
-                        bypassEnable = false;
-                        notifyBypassEnableChanged();
-                        LOG_MSG(LOG_INFO, "Bypass is disabled by MIDI Controller");
+            if (controllerNumber == BYPASS_MDII_CONTROLLER_NUMBER && channel == BYPASS_MDII_CHANNEL) {
+                if (controllerValue == BYPASS_ENABLE_MDII_CONTROLLER_VALUE ||
+                    controllerValue == BYPASS_DISABLE_MDII_CONTROLLER_VALUE) {
+                    bool newBypassEnable = (controllerValue == BYPASS_ENABLE_MDII_CONTROLLER_VALUE);
+                    if (bypassEnable != newBypassEnable) {
+                        bypassEnable = newBypassEnable;
+                        notifyProcessorParamChanged("bypassEnable", bypassEnable);
+                        LOG_MSG(LOG_INFO, "Bypass is " + std::string(bypassEnable ? "enabled" : "disabled") +
+                                              " by MIDI Controller");
                     }
                 } else {
                     LOG_MSG(LOG_WARN, "Invalid MIDI Controller Value: " + std::to_string(controllerValue) +
-                                          ", or Channel: " + std::to_string(channel) +
-                                          ", for Controller Number: " + std::to_string(controllerNumber));
+                                          ", for Controller Number: " + std::to_string(controllerNumber) +
+                                          ", Channel: " + std::to_string(channel));
                 }
             } else if (controllerNumber == GAIN_MIDI_CONTROLLER_NUMBER && channel == GAIN_MDII_CHANNEL) {
                 float newGain = static_cast<float>(controllerValue *
                                                        (MAX_GAIN_VALUE - MIN_GAIN_VALUE) / MAX_MIDI_CONTROL_VALUE +
                                                    MIN_GAIN_VALUE);
-                if (newGain != gain) {
+                if (gain != newGain) {
                     gain = newGain;
                     int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, sizeof(float));
                     if (ret != 0) {
                         LOG_MSG(LOG_ERROR, "Failed to algo_set_param. ret = " + std::to_string(ret));
                     }
-                    notifyGainValueChanged();
+                    notifyProcessorParamChanged("gain", gain);
                     LOG_MSG(LOG_INFO, "Gain is set to " + std::to_string(gain) + " dB by MIDI Controller");
                 }
             }

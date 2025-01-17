@@ -81,16 +81,7 @@ public:
     void comboBoxChanged(juce::ComboBox *comboBox) override;
     void sliderValueChanged(juce::Slider *slider) override;
     void initializeUIComponents();
-
-    void bypassEnableChanged(bool newState) override
-    {
-        bypassButton.setToggleState(newState, juce::dontSendNotification);
-        // don't sync notification, due to the fact that the button will trigger the bypassEnableChanged callback
-    }
-    void gainValueChanged(float newValue) override
-    {
-        gainSlider.setValue(newValue, juce::dontSendNotification);
-    }
+    void processorParamChanged(const juce::String &parameterID, float newValue) override;
 
 private:
     // This reference is provided as a quick way for your editor to
