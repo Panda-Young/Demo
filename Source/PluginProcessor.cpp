@@ -62,19 +62,15 @@ public:
 
 void DemoAudioProcessor::initializeBuffers()
 {
-    for (int channel = 0; channel < MAX_SUPPORT_CHANNELS; channel++) {
-        writeBuf[channel] = std::make_unique<float[]>(blockSize);
-        if (!writeBuf[channel]) {
-            LOG_MSG(LOG_ERROR, "Failed to allocate memory for writeBuf[" + std::to_string(channel) + "]");
-            isInitDone = false;
-            return;
+    try {
+        for (int channel = 0; channel < MAX_SUPPORT_CHANNELS; channel++) {
+            writeBuf[channel] = std::make_unique<float[]>(blockSize);
+            readBuf[channel] = std::make_unique<float[]>(blockSize);
         }
-        readBuf[channel] = std::make_unique<float[]>(blockSize);
-        if (!readBuf[channel]) {
-            LOG_MSG(LOG_ERROR, "Failed to allocate memory for readBuf[" + std::to_string(channel) + "]");
-            isInitDone = false;
-            return;
-        }
+    } catch (const std::bad_alloc& e) {
+        LOG_MSG(LOG_ERROR, "Failed to allocate memory: " + std::string(e.what()));
+        isInitDone = false;
+        return;
     }
 }
 
@@ -169,12 +165,8 @@ DemoAudioProcessor::DemoAudioProcessor()
 DemoAudioProcessor::~DemoAudioProcessor()
 {
     for (int channel = 0; channel < MAX_SUPPORT_CHANNELS; channel++) {
-        if (writeBuf[channel]) {
-            writeBuf[channel].reset();
-        }
-        if (readBuf[channel]) {
-            readBuf[channel].reset();
-        }
+        writeBuf[channel].reset();
+        readBuf[channel].reset();
     }
     if (algo_handle != nullptr) {
         algo_deinit(algo_handle);

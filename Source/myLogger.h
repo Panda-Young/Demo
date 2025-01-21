@@ -29,6 +29,7 @@ typedef enum LogLevel {
 #include <JucePluginDefines.h>
 #include <mutex>
 #include <string>
+#include <cstring>
 
 class myLogger
 {

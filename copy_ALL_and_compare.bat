@@ -37,13 +37,13 @@ set APP_INSTALL_DIR=C:\Program Files
 
 @REM set host_program_name="Adobe Audition.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\Adobe\Adobe Audition 2020\Adobe Audition.exe"
-@REM set host_program_name="Audacity.exe"
-@REM set host_program_path="%APP_INSTALL_DIR%\Audacity\Audacity.exe"
+set host_program_name="Audacity.exe"
+set host_program_path="%APP_INSTALL_DIR%\Audacity\Audacity.exe"
 @REM set host_program_name="reaper.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\REAPER (x64)\reaper.exe"
-set host_program_name="mulch2.exe"
-set host_program_root=%APP_INSTALL_DIR%\AudioMulch 2.2.4
-set host_program_path="%host_program_root%\%host_program_name%"
+@REM set host_program_name="mulch2.exe"
+@REM set host_program_root=%APP_INSTALL_DIR%\AudioMulch 2.2.4
+@REM set host_program_path="%host_program_root%\%host_program_name%"
 
 
 @REM Kill the program
