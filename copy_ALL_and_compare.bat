@@ -1,8 +1,8 @@
 @REM *************************************************************************
 @REM Description: copy all target files to Plugin folder
-@REM version: 0.1.1
+@REM version: 0.1.0
 @REM Author: Panda-Young
-@REM Date: 2024-02-28 22:51:44
+@REM Date: 2024-03-27 11:37:11
 @REM Copyright (c) 2024 by Panda-Young, All Rights Reserved.
 @REM *************************************************************************
 @echo off
@@ -10,16 +10,8 @@
 @REM run as administrator
 (PUSHD "%~DP0")&(REG QUERY "HKU\S-1-5-19">NUL 2>&1)||(powershell -Command "Start-Process '%~sdpnx0' -Verb RunAs")&&goto :eof
 
+@REM enable delayed expansion after run as administrator
 setlocal enabledelayedexpansion
-
-:error_exit
-if not "%~1"=="" (
-    color 04
-    echo %~1
-    pause
-    color 07
-    exit /b 1
-)
 
 @REM Configuration options
 set copy_vst2=1
@@ -35,16 +27,15 @@ if "%build_type%" NEQ "Debug" (
 
 set APP_INSTALL_DIR=C:\Program Files
 
-@REM set host_program_name="Adobe Audition.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\Adobe\Adobe Audition 2020\Adobe Audition.exe"
-set host_program_name="Audacity.exe"
 set host_program_path="%APP_INSTALL_DIR%\Audacity\Audacity.exe"
-@REM set host_program_name="reaper.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\REAPER (x64)\reaper.exe"
-@REM set host_program_name="mulch2.exe"
-@REM set host_program_root=%APP_INSTALL_DIR%\AudioMulch 2.2.4
-@REM set host_program_path="%host_program_root%\%host_program_name%"
+@REM set host_program_path="%APP_INSTALL_DIR%\AudioMulch 2.2.4\mulch2.exe"
 
+for %%f in (%host_program_path%) do (
+    set host_program_name="%%~nxf"
+    set host_program_root=%%~dpf
+)
 
 @REM Kill the program
 taskkill /F /IM %host_program_name% >nul 2>&1
@@ -103,4 +94,13 @@ type nul > %Temp%\%plugin_name%_VST_Plugin.log
 start /B "start host program" %host_program_path%
 timeout /t 2 /NOBREAK >nul
 
-exit
+:error_exit
+if not "%~1"=="" (
+    color 04
+    echo %~1 With error code %errorlevel%
+    pause
+    color 07
+    exit
+)
+
+exit /b 0

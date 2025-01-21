@@ -75,8 +75,6 @@ public:
     int getUsedPluginType() const { return pluginType; }
     const std::string &getUsedHostAppName() const { return hostAppName; }
     int getUsedHostAppVersion() const { return hostAppVersion; }
-    void setAnyParamChanged(bool state) { anyParamChanged = state; }
-    bool getAnyParamChanged() const { return anyParamChanged; }
     void setDataDumpState(bool state) { dataDumpEnable = state; }
     bool getDataDumpState() const { return dataDumpEnable; }
 
@@ -99,7 +97,6 @@ private:
     std::string hostAppName = "";
     int hostAppVersion = -1;
     bool bypassEnable = false;
-    bool anyParamChanged = false;
     bool dataDumpEnable = false;
     bool isLicenseValid = false;
     bool isInitDone = false;

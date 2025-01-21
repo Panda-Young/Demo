@@ -18,15 +18,23 @@ typedef enum RegType {
     VIPReg
 } RegType_t;
 
-int getPluginType();
+typedef enum PluginType {
+    UnknownType = 0,
+    VST2Plugin = 2,
+    VST3Plugin = 3,
+} PluginType_t;
+
+PluginType_t getPluginType();
 std::string getHostAppName();
 int getAuditionVersion();
+
 void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples);
 void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft,
                       const float *dataRight, size_t numSamples);
 void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float> &buffer);
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam = 32, uint16_t audioFormat = 3);
+void deleteEmptyFilesAndFolders(const juce::File& directory);
 
 bool get_cpu_id(std::string &cpu_id);
 bool get_disk_id(std::string &disk_id);

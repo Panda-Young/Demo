@@ -67,7 +67,7 @@ void DemoAudioProcessor::initializeBuffers()
             writeBuf[channel] = std::make_unique<float[]>(blockSize);
             readBuf[channel] = std::make_unique<float[]>(blockSize);
         }
-    } catch (const std::bad_alloc& e) {
+    } catch (const std::bad_alloc &e) {
         LOG_MSG(LOG_ERROR, "Failed to allocate memory: " + std::string(e.what()));
         isInitDone = false;
         return;
@@ -299,8 +299,8 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
             "Initialization Failed",
             "Failed to initialize the plugin! "
             "Please check the last part of the log file: \n" +
-                logger.getLogFile().getFullPathName() + "\n"
-                                                        "You can also send the log file to the developers for further assistance.",
+                logger.getLogFile().getFullPathName() + "\n" +
+                "You can also send the log file to the developers for further assistance.",
             "OK",
             nullptr,
             new OpenLogCallback());
@@ -311,7 +311,7 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         originalChannels = getTotalNumInputChannels();
         LOG_MSG(LOG_INFO, "prepareToPlay: sampleRate=" + std::to_string(sampleRate) +
                               ", samplesPerBlock=" + std::to_string(samplesPerBlock) +
-                              ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " milliseconds");
+                              ", about " + std::to_string(samplesPerBlock * 1000.0f / sampleRate) + " ms");
 
         setLatencySamples(blockSize);
         LOG_MSG(LOG_INFO, "set latency samples: " + std::to_string(blockSize));
@@ -322,7 +322,8 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         if (dataDumpDir.createDirectory()) {
             LOG_MSG(LOG_DEBUG, "Created data dump folder: \"" + dataDumpDir.getFullPathName().toStdString() + "\"");
         } else {
-            LOG_MSG(LOG_ERROR, "Failed to create data dump folder: \"" + dataDumpDir.getFullPathName().toStdString() + "\"");
+            LOG_MSG(LOG_ERROR, "Failed to create data dump folder: \"" +
+                                   dataDumpDir.getFullPathName().toStdString() + "\"");
         }
 
         auto now = std::chrono::system_clock::now();
@@ -353,31 +354,7 @@ void DemoAudioProcessor::releaseResources()
             convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(validChannels),
                             static_cast<uint32_t>(originalSampleRate), 32, 3);
         }
-        if (dataDumpDir.isDirectory()) {
-            juce::Array<juce::File> files;
-            dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
-            for (auto &file : files) {
-                if (file.getSize() == 0) {
-                    if (file.deleteFile()) {
-                        LOG_MSG_CF(LOG_DEBUG, "The file \"%s\" is empty and deleted successfully.",
-                                   file.getFullPathName().toRawUTF8());
-                    } else {
-                        LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty file \"%s\"",
-                                   file.getFullPathName().toRawUTF8());
-                    }
-                }
-            }
-            dataDumpDir.findChildFiles(files, juce::File::findFiles, false);
-            if (files.size() == 0) {
-                if (dataDumpDir.deleteRecursively()) {
-                    LOG_MSG_CF(LOG_DEBUG, "The folder \"%s\" is empty and deleted successfully.",
-                               dataDumpDir.getFullPathName().toRawUTF8());
-                } else {
-                    LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty folder \"%s\"",
-                               dataDumpDir.getFullPathName().toRawUTF8());
-                }
-            }
-        }
+        deleteEmptyFilesAndFolders(dataDumpDir);
         processBlockCounter = 0;
         toReleaseResources = false;
         LOG_MSG(LOG_INFO, "released Resources");
@@ -428,7 +405,7 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
         LOG_MSG(LOG_INFO, "processBlock: numSamples=" + std::to_string(numSamples) +
                               ", totalNumInputChannels=" + std::to_string(totalNumInputChannels) +
                               ", totalNumOutputChannels=" + std::to_string(totalNumOutputChannels) +
-                              ", about " + std::to_string(numSamples * 1000.0f / originalSampleRate) + " milliseconds");
+                              ", about " + std::to_string(numSamples * 1000.0f / originalSampleRate) + " ms");
     }
 
     int bufferIndex = 0;
@@ -517,12 +494,6 @@ void DemoAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
-    if (anyParamChanged == false) {
-        // in VST3 plugin, before restore parameters, call getStateInformation will store the default parameters
-        // This will overwrite the user's last selection.
-        LOG_MSG(LOG_WARN, "none of the parameters have been changed, skip store parameters to memory block");
-        return;
-    }
     juce::MemoryOutputStream stream(destData, false);
     apvts.state.writeToStream(stream);
 
@@ -556,6 +527,14 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
         float lastGainValue = apvts.getRawParameterValue("gain")->load();
         if (gain != lastGainValue) {
             gain = lastGainValue;
+            if (algo_handle != nullptr) {
+                int ret = algo_set_param(algo_handle, ALGO_PARAM2, &gain, (int)sizeof(float));
+                if (ret != E_OK) {
+                    LOG_MSG(LOG_ERROR, "algo_set_param failed. ret = " + std::to_string(ret));
+                } else {
+                    LOG_MSG(LOG_INFO, "Gain value has been set to " + std::to_string(gain) + " dB by last state");
+                }
+            }
         }
     } else {
         if (!tree.hasType("Parameters")) {

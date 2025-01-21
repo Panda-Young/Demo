@@ -18,7 +18,7 @@
 #include <sstream>                               // Include this for std::ostringstream, std::istringstream
 #include <cstring>                               // Include this for std::strrchr
 
-int getPluginType()
+PluginType_t getPluginType()
 {
     juce::File dllPath = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
     LOG_MSG_CF(LOG_INFO, "dllPath= \"%s\"", dllPath.getFullPathName().toRawUTF8());
@@ -27,12 +27,12 @@ int getPluginType()
     if (pos != std::string::npos) {
         auto extension = path.substr(pos);
         if (extension == ".dll") {
-            return 2;
+            return VST2Plugin;
         } else if (extension == ".vst3") {
-            return 3;
+            return VST3Plugin;
         }
     }
-    return -1;
+    return UnknownType;
 }
 
 std::string getHostAppName()
@@ -185,6 +185,42 @@ void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t S
     // Delete PCM file
     if (!pcmFile.deleteFile()) {
         LOG_MSG(LOG_ERROR, "Failed to delete PCM file: \"" + pcmFile.getFullPathName().toStdString() + "\"");
+    }
+}
+
+void deleteEmptyFilesAndFolders(const juce::File& directory)
+{
+    if (!directory.isDirectory())
+        return;
+
+    juce::Array<juce::File> files;
+    directory.findChildFiles(files, juce::File::findFilesAndDirectories, false);
+
+    for (auto& file : files) {
+        if (file.isDirectory()) {
+            deleteEmptyFilesAndFolders(file); // Recursively handle subdirectories
+        } else if (file.getSize() == 0) {
+            if (file.deleteFile()) {
+                LOG_MSG_CF(LOG_DEBUG, "The file \"%s\" is empty and deleted successfully.",
+                           file.getFullPathName().toRawUTF8());
+            } else {
+                LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty file \"%s\"",
+                           file.getFullPathName().toRawUTF8());
+            }
+        }
+    }
+
+    // Check again if the directory is empty
+    files.clear();
+    directory.findChildFiles(files, juce::File::findFilesAndDirectories, false);
+    if (files.isEmpty()) {
+        if (directory.deleteRecursively()) {
+            LOG_MSG_CF(LOG_DEBUG, "The folder \"%s\" is empty and deleted successfully.",
+                       directory.getFullPathName().toRawUTF8());
+        } else {
+            LOG_MSG_CF(LOG_ERROR, "Failed to delete the empty folder \"%s\"",
+                       directory.getFullPathName().toRawUTF8());
+        }
     }
 }
 

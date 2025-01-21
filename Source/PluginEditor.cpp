@@ -93,7 +93,7 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     setSize(UI_WIDTH, UI_HEIGHT);
 
 #if JUCE_WINDOWS
-    if (audioProcessor.getUsedPluginType() == 3 &&
+    if (audioProcessor.getUsedPluginType() == VST3Plugin &&
         audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
         audioProcessor.getUsedHostAppVersion() >= 0 && audioProcessor.getUsedHostAppVersion() <= 2020) {
         float scaleFactor = static_cast<float>(GetDpiForSystem()) / 96.0f; // DPI scaling for Windows
@@ -164,7 +164,6 @@ void DemoAudioProcessorEditor::buttonClicked(juce::Button *button)
         // program should not reach here
         LOG_MSG(LOG_WARN, "Unknown button clicked");
     }
-    audioProcessor.setAnyParamChanged(true);
 }
 
 void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
@@ -179,7 +178,6 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
             LOG_MSG(LOG_INFO, "Gain value changed to " + std::to_string(gainValue) + " dB");
         }
     }
-    audioProcessor.setAnyParamChanged(true);
 }
 
 void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
@@ -188,5 +186,4 @@ void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
         audioProcessor.logger.setLogLevel(static_cast<LogLevel_t>(logLevelComboBox.getSelectedId()));
         LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
     }
-    audioProcessor.setAnyParamChanged(true);
 }
