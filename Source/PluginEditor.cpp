@@ -21,8 +21,8 @@
 #include <windows.h> // Include this for GetDpiForSystem
 #endif
 
-#define UI_WIDTH 400
-#define UI_HEIGHT 220
+#define EDITOR_WIDTH 400
+#define EDITOR_HEIGHT 220
 
 #define MARGIN 10
 
@@ -90,14 +90,14 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
     initializeUIComponents();
-    setSize(UI_WIDTH, UI_HEIGHT);
+    setSize(EDITOR_WIDTH, EDITOR_HEIGHT);
 
 #if JUCE_WINDOWS
     if (audioProcessor.getUsedPluginType() == VST3Plugin &&
         audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
         audioProcessor.getUsedHostAppVersion() >= 0 && audioProcessor.getUsedHostAppVersion() <= 2020) {
         float scaleFactor = static_cast<float>(GetDpiForSystem()) / 96.0f; // DPI scaling for Windows
-        setSize(static_cast<int>(UI_WIDTH * scaleFactor), static_cast<int>(UI_HEIGHT * scaleFactor));
+        setSize(static_cast<int>(EDITOR_WIDTH * scaleFactor), static_cast<int>(EDITOR_HEIGHT * scaleFactor));
     }
 #endif
 
@@ -127,17 +127,17 @@ void DemoAudioProcessorEditor::paint(juce::Graphics &g)
 
 void DemoAudioProcessorEditor::resized()
 {
-    int X_OFFSET = (UI_WIDTH - SLIDER_WIDTH) / 2;
+    int X_OFFSET = (EDITOR_WIDTH - SLIDER_WIDTH) / 2;
     int Y_OFFSET = MARGIN;
     gainSlider.setBounds(X_OFFSET, Y_OFFSET, SLIDER_WIDTH, SLIDER_HEIGHT);
-    X_OFFSET = (UI_WIDTH - BUTTON_WIDTH) / 2;
+    X_OFFSET = (EDITOR_WIDTH - BUTTON_WIDTH) / 2;
     Y_OFFSET += SLIDER_HEIGHT + MARGIN;
     bypassButton.setBounds(X_OFFSET, Y_OFFSET, BUTTON_WIDTH, BUTTON_HEIGHT);
 
-    int bottom = UI_HEIGHT - BUTTON_HEIGHT - MARGIN;
+    int bottom = EDITOR_HEIGHT - BUTTON_HEIGHT - MARGIN;
     versionButton.setBounds(MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
-    logLevelComboBox.setBounds((int)((UI_WIDTH - BUTTON_WIDTH) / 2), bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
-    dataDumpButton.setBounds(UI_WIDTH - BUTTON_WIDTH - MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
+    logLevelComboBox.setBounds((int)((EDITOR_WIDTH - BUTTON_WIDTH) / 2), bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
+    dataDumpButton.setBounds(EDITOR_WIDTH - BUTTON_WIDTH - MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
 
     LOG_MSG(LOG_DEBUG, "UI resized");
 }
