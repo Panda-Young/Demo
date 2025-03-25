@@ -25,10 +25,10 @@ if "%build_type%" NEQ "Debug" (
     set build_type=Release
 )
 
-set APP_INSTALL_DIR=C:\Program Files
+set APP_INSTALL_DIR=D:\Program Files
 
-@REM set host_program_path="%APP_INSTALL_DIR%\Adobe\Adobe Audition 2020\Adobe Audition.exe"
-set host_program_path="%APP_INSTALL_DIR%\Audacity\Audacity.exe"
+set host_program_path="%APP_INSTALL_DIR%\Adobe\Adobe Audition 2020\Adobe Audition.exe"
+@REM set host_program_path="%APP_INSTALL_DIR%\Audacity\Audacity.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\REAPER (x64)\reaper.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\AudioMulch 2.2.4\mulch2.exe"
 

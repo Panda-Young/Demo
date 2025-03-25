@@ -9,14 +9,12 @@
 #include "myUtils.h"
 #include "myLogger.h"
 #include <JucePluginDefines.h>                   // Include this for JucePlugin_Name
-#include <chrono>                                // Include this for std::chrono
-#include <ctime>                                 // Include this for std::time_t, std::tm, std::localtime, std::mktime
+#include <cstring>                               // Include this for std::strrchr
 #include <fstream>                               // Include this for std::ofstream, std::ifstream
 #include <iomanip>                               // Include this for std::put_time
 #include <juce_cryptography/juce_cryptography.h> // Include this for MD5
 #include <regex>                                 // Include this for std::regex, std::smatch
 #include <sstream>                               // Include this for std::ostringstream, std::istringstream
-#include <cstring>                               // Include this for std::strrchr
 
 PluginType_t getPluginType()
 {
@@ -188,7 +186,7 @@ void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t S
     }
 }
 
-void deleteEmptyFilesAndFolders(const juce::File& directory)
+void deleteEmptyFilesAndFolders(const juce::File &directory)
 {
     if (!directory.isDirectory())
         return;
@@ -196,7 +194,7 @@ void deleteEmptyFilesAndFolders(const juce::File& directory)
     juce::Array<juce::File> files;
     directory.findChildFiles(files, juce::File::findFilesAndDirectories, false);
 
-    for (auto& file : files) {
+    for (auto &file : files) {
         if (file.isDirectory()) {
             deleteEmptyFilesAndFolders(file); // Recursively handle subdirectories
         } else if (file.getSize() == 0) {

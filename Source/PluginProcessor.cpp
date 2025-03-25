@@ -331,13 +331,20 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         char timeStr[20] = {0};
         std::strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H%M%S_", std::localtime(&now_time));
         juce::String TimeStamp = juce::String(timeStr);
-        processedDataDumpFile = dataDumpDir.getChildFile(TimeStamp + "processed.pcm");
-        if (processedDataDumpFile.create().wasOk()) {
+        dataDumpFile = dataDumpDir.getChildFile(TimeStamp + "processed.pcm");
+        if (dataDumpFile.create().wasOk()) {
             LOG_MSG(LOG_DEBUG, "Created data dump file: \"" +
-                                   processedDataDumpFile.getFullPathName().toStdString() + "\"");
+                                   dataDumpFile.getFullPathName().toStdString() + "\"");
+            if ((dataDumpFilePtr = fopen(dataDumpFile.getFullPathName().toUTF8(), "ab+")) == nullptr) {
+                LOG_MSG(LOG_ERROR, "Failed to open data dump file: \"" +
+                                       dataDumpFile.getFullPathName().toStdString() + "\"");
+            } else {
+                LOG_MSG(LOG_DEBUG, "Opened data dump file: \"" +
+                                       dataDumpFile.getFullPathName().toStdString() + "\"");
+            }
         } else {
             LOG_MSG(LOG_ERROR, "Failed to create data dump file: \"" +
-                                   processedDataDumpFile.getFullPathName().toStdString() + "\"");
+                                   dataDumpFile.getFullPathName().toStdString() + "\"");
         }
         toReleaseResources = true;
     } else {
@@ -350,8 +357,24 @@ void DemoAudioProcessor::releaseResources()
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
     if (toReleaseResources) {
+        if (dataDumpFilePtr) {
+            if (fflush(dataDumpFilePtr) == 0) {
+                LOG_MSG(LOG_DEBUG, "Flushed data dump file: \"" +
+                                       dataDumpFile.getFullPathName().toStdString() + "\"");
+            } else {
+                LOG_MSG(LOG_ERROR, "Failed to flush data dump file: \"" +
+                                       dataDumpFile.getFullPathName().toStdString() + "\"");
+            }
+            if (fclose(dataDumpFilePtr) == 0) {
+                LOG_MSG(LOG_DEBUG, "Closed data dump file: \"" +
+                                       dataDumpFile.getFullPathName().toStdString() + "\"");
+            } else {
+                LOG_MSG(LOG_ERROR, "Failed to close data dump file: \"" +
+                                       dataDumpFile.getFullPathName().toStdString() + "\"");
+            }
+        }
         if (processBlockCounter) {
-            convertPCMtoWAV(processedDataDumpFile, static_cast<uint16_t>(validChannels),
+            convertPCMtoWAV(dataDumpFile, static_cast<uint16_t>(validChannels),
                             static_cast<uint32_t>(originalSampleRate), 32, 3);
         }
         deleteEmptyFilesAndFolders(dataDumpDir);
@@ -440,10 +463,10 @@ void DemoAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::Mi
                 LOG_MSG(LOG_DEBUG, "algo_process frame " + std::to_string(algoFrameCounter++) +
                                        " elapsed time: " + std::to_string(frameStop - frameStart) + " ms");
                 if (dataDumpEnable) {
-                    if (validChannels == 1) {
-                        dumpFloatPCMData(processedDataDumpFile, writeBuf[0].get(), blockSize);
-                    } else if (validChannels == MAX_SUPPORT_CHANNELS) {
-                        dumpFloatPCMData(processedDataDumpFile, writeBuf[0].get(), writeBuf[1].get(), blockSize);
+                    for (int channel = 0; channel < validChannels; channel++) {
+                        for (int sample = 0; sample < blockSize; sample++) {
+                            fwrite(writeBuf[channel].get() + sample, sizeof(float), 1, dataDumpFilePtr);
+                        }
                     }
                 }
             }

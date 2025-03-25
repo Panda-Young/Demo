@@ -10,6 +10,8 @@
 #define UTILS_H
 
 #include <JuceHeader.h>
+#include <chrono> // Include this for std::chrono
+#include <ctime>  // Include this for std::time_t, std::tm, std::localtime, std::mktime
 #include <string>
 
 typedef enum RegType {
@@ -34,7 +36,7 @@ void dumpFloatPCMData(const juce::File &pcmFile, const float *dataLeft,
 void dumpFloatBufferData(const juce::File &pcmFile, juce::AudioBuffer<float> &buffer);
 void convertPCMtoWAV(const juce::File &pcmFile, uint16_t Num_Channel, uint32_t SampleRate,
                      uint16_t bits_per_sam = 32, uint16_t audioFormat = 3);
-void deleteEmptyFilesAndFolders(const juce::File& directory);
+void deleteEmptyFilesAndFolders(const juce::File &directory);
 
 bool get_cpu_id(std::string &cpu_id);
 bool get_disk_id(std::string &disk_id);

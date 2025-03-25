@@ -113,7 +113,8 @@ private:
     std::unique_ptr<float[]> readBuf[MAX_SUPPORT_CHANNELS];
     int writeIndex = 0;
     int readIndex = 0;
-    juce::File dataDumpDir, processedDataDumpFile;
+    juce::File dataDumpDir, dataDumpFile;
+    FILE *dataDumpFilePtr = nullptr;
 
     double originalSampleRate = 0;
     int originalChannels = 0;

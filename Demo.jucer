@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="ndQYFm" name="Demo" projectType="audioplug" jucerFormatVersion="1"
-              pluginFormats="buildStandalone,buildVST,buildVST3" version="2.1.4"
+              pluginFormats="buildStandalone,buildVST,buildVST3" version="2.1.5"
               projectLineFeed="&#13;&#10;" pluginManufacturer="Panda" companyName="Panda">
   <MAINGROUP id="A3A7Ql" name="Demo">
     <GROUP id="{553DCF37-AEB0-4548-5A47-D63C9DB6E300}" name="Source">
