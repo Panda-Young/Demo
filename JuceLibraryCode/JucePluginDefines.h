@@ -155,7 +155,7 @@
  #define JucePlugin_ARAFactoryID           "com.Panda.Demo.factory"
 #endif
 #ifndef  JucePlugin_ARADocumentArchiveID
- #define JucePlugin_ARADocumentArchiveID   "com.Panda.Demo.aradocumentarchive.2.1.4"
+ #define JucePlugin_ARADocumentArchiveID   "com.Panda.Demo.aradocumentarchive.2.1.5"
 #endif
 #ifndef  JucePlugin_ARACompatibleArchiveIDs
  #define JucePlugin_ARACompatibleArchiveIDs  ""
