@@ -28,6 +28,7 @@ typedef enum PluginType {
 
 PluginType_t getPluginType();
 std::string getHostAppName();
+std::string getHostAppDir();
 int getAuditionVersion();
 
 void dumpFloatPCMData(const juce::File &pcmFile, const float *data, size_t numSamples);

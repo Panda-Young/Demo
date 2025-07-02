@@ -36,9 +36,16 @@ PluginType_t getPluginType()
 std::string getHostAppName()
 {
     juce::File hostAppFile = juce::File::getSpecialLocation(juce::File::hostApplicationPath);
-    std::string tempHostAppName = hostAppFile.getFileNameWithoutExtension().toStdString();
+    std::string hostAppName = hostAppFile.getFileNameWithoutExtension().toStdString();
     LOG_MSG(LOG_INFO, "hostAppPath = \"" + hostAppFile.getFullPathName().toStdString() + "\"");
-    return tempHostAppName;
+    return hostAppName;
+}
+
+std::string getHostAppDir()
+{
+    juce::File hostAppFile = juce::File::getSpecialLocation(juce::File::hostApplicationPath);
+    juce::File hostAppDir = hostAppFile.getParentDirectory();
+    return hostAppDir.getFullPathName().toStdString();
 }
 
 int getAuditionVersion()
