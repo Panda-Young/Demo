@@ -72,9 +72,9 @@ public:
     void setStateInformation(const void *data, int sizeInBytes) override;
 
     //==============================================================================
-    int getUsedPluginType() const { return pluginType; }
-    const std::string &getUsedHostAppName() const { return hostAppName; }
-    int getUsedHostAppVersion() const { return hostAppVersion; }
+    int getUserPluginType() const { return pluginType; }
+    const std::string &getUserHostAppName() const { return hostAppName; }
+    int getUserHostAppVersion() const { return hostAppVersion; }
     void setDataDumpState(bool state) { dataDumpEnable = state; }
     bool getDataDumpState() const { return dataDumpEnable; }
 

@@ -30,7 +30,7 @@ set APP_INSTALL_DIR=D:\Program Files
 set host_program_path="%APP_INSTALL_DIR%\Adobe\Adobe Audition 2020\Adobe Audition.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\Audacity\Audacity.exe"
 @REM set host_program_path="%APP_INSTALL_DIR%\REAPER (x64)\reaper.exe"
-@REM set host_program_path="%APP_INSTALL_DIR%\AudioMulch 2.2.4\mulch2.exe"
+@REM set host_program_path="D:\Program Files (x86)\AudioMulch 2.2.4\mulch2.exe"
 
 for %%f in (%host_program_path%) do (
     set host_program_name="%%~nxf"

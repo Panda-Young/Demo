@@ -93,9 +93,9 @@ DemoAudioProcessorEditor::DemoAudioProcessorEditor(DemoAudioProcessor &p)
     setSize(EDITOR_WIDTH, EDITOR_HEIGHT);
 
 #if JUCE_WINDOWS
-    if (audioProcessor.getUsedPluginType() == VST3Plugin &&
-        audioProcessor.getUsedHostAppName() == "Adobe Audition" &&
-        audioProcessor.getUsedHostAppVersion() >= 0 && audioProcessor.getUsedHostAppVersion() <= 2020) {
+    if (audioProcessor.getUserPluginType() == VST3Plugin &&
+        audioProcessor.getUserHostAppName() == "Adobe Audition" &&
+        audioProcessor.getUserHostAppVersion() >= 0 && audioProcessor.getUserHostAppVersion() <= 2020) {
         float scaleFactor = static_cast<float>(GetDpiForSystem()) / 96.0f; // DPI scaling for Windows
         setSize(static_cast<int>(EDITOR_WIDTH * scaleFactor), static_cast<int>(EDITOR_HEIGHT * scaleFactor));
     }
