@@ -22,7 +22,7 @@
 
 #include "JucePluginDefines.h"
 
-#define JUCE_PROJUCER_VERSION 0x80008
+#define JUCE_PROJUCER_VERSION 0x80009
 
 //==============================================================================
 #define JUCE_MODULE_AVAILABLE_juce_analytics                1
@@ -142,7 +142,11 @@
 #endif
 
 #ifndef    JUCE_STANDALONE_FILTER_WINDOW_USE_KIOSK_MODE
- //#define JUCE_STANDALONE_FILTER_WINDOW_USE_KIOSK_MODE 0
+ //#define JUCE_STANDALONE_FILTER_WINDOW_USE_KIOSK_MODE 1
+#endif
+
+#ifndef    JUCE_IGNORE_VST3_MISMATCHED_PARAMETER_ID_WARNING
+ //#define JUCE_IGNORE_VST3_MISMATCHED_PARAMETER_ID_WARNING 0
 #endif
 
 //==============================================================================
