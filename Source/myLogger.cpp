@@ -30,12 +30,15 @@ myLogger::~myLogger()
 void myLogger::initializeLogger()
 {
     tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-    char logFileName[64] = JucePlugin_Name;
-    strcat(logFileName, "_VST_Plugin.log");
-    logFile = tempDir.getChildFile(juce::String(logFileName));
-    char logStartMsg[128] = {0};
-    sprintf(logStartMsg, "%s VST Plugin %s", JucePlugin_Name, JucePlugin_VersionString);
-    fileLogger = std::make_unique<juce::FileLogger>(logFile, logStartMsg);
+    juce::File chosenDir = tempDir;
+    if (!chosenDir.hasWriteAccess()) {
+        chosenDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+        chosenDir.createDirectory();
+    }
+    juce::String logFileName = juce::String(JucePlugin_Name) + "_VST_Plugin.log";
+    logFile = chosenDir.getChildFile(logFileName);
+    juce::String logStartMsg = juce::String(JucePlugin_Name) + " VST Plugin " + juce::String(JucePlugin_VersionString);
+    fileLogger = std::make_unique<juce::FileLogger>(logFile, logStartMsg.toRawUTF8());
 }
 
 void myLogger::logMsg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line)
