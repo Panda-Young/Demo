@@ -68,7 +68,10 @@ void DemoAudioProcessorEditor::initializeUIComponents()
 
     addAndMakeVisible(bypassButton);
     bypassButton.setButtonText("Bypass");
+    bypassButton.setClickingTogglesState(true);
     bypassButton.setLookAndFeel(&toggleButtonWithTextInsideLookAndFeel);
+    bypassButton.setInterceptsMouseClicks(true, true);
+    bypassButton.setAlwaysOnTop(true);
     bypassAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.getApvts(), "bypassEnable", bypassButton);
     bypassButton.addListener(this);
@@ -76,6 +79,7 @@ void DemoAudioProcessorEditor::initializeUIComponents()
     addAndMakeVisible(gainSlider);
     gainSlider.setSliderStyle(juce::Slider::Rotary);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, SLIDER_TEXTBOX_WIDTH, SLIDER_TEXTBOX_HEIGHT);
+    gainSlider.setInterceptsMouseClicks(true, false); // allow child (center button) to receive clicks
     gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.getApvts(), "gain", gainSlider);
     gainSlider.addListener(this);
@@ -127,12 +131,26 @@ void DemoAudioProcessorEditor::paint(juce::Graphics &g)
 
 void DemoAudioProcessorEditor::resized()
 {
-    int X_OFFSET = (EDITOR_WIDTH - SLIDER_WIDTH) / 2;
+    int X_OFFSET = (EDITOR_WIDTH - 140) / 2;
     int Y_OFFSET = MARGIN;
-    gainSlider.setBounds(X_OFFSET, Y_OFFSET, SLIDER_WIDTH, SLIDER_HEIGHT);
-    X_OFFSET = (EDITOR_WIDTH - BUTTON_WIDTH) / 2;
-    Y_OFFSET += SLIDER_HEIGHT + MARGIN;
-    bypassButton.setBounds(X_OFFSET, Y_OFFSET, BUTTON_WIDTH, BUTTON_HEIGHT);
+    gainSlider.setBounds(X_OFFSET, Y_OFFSET, 140, 140);
+
+    // Calculate the actual rotary knob circle area (excluding text box below)
+    auto sliderBounds = gainSlider.getBounds();
+    const int textBoxHeight = SLIDER_TEXTBOX_HEIGHT;
+    const int rotaryHeight = sliderBounds.getHeight() - textBoxHeight;
+    const int rotarySize = juce::jmin(rotaryHeight, sliderBounds.getWidth());
+
+    // Center the circular rotary area within the slider bounds
+    const int rotaryCenterX = sliderBounds.getX() + sliderBounds.getWidth() / 2;
+    const int rotaryCenterY = sliderBounds.getY() + rotarySize / 2;
+
+    // Place center button aligned with rotary circle center
+    const int centerBtnSize = static_cast<int>(rotarySize * 0.55f);
+    bypassButton.setBounds(
+        rotaryCenterX - centerBtnSize / 2,
+        rotaryCenterY - centerBtnSize / 2,
+        centerBtnSize, centerBtnSize);
 
     int bottom = EDITOR_HEIGHT - BUTTON_HEIGHT - MARGIN;
     versionButton.setBounds(MARGIN, bottom, BUTTON_WIDTH, BUTTON_HEIGHT);
