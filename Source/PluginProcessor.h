@@ -87,8 +87,9 @@ public:
     void *getAlgoHandle() const { return algo_handle; }
 
     juce::AudioProcessorValueTreeState &getApvts() { return apvts; }
+    const juce::AudioProcessorValueTreeState &getApvts() const { return apvts; }
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
-    myLogger &logger = myLogger::getInstance();
+    myLogger &getLogger() const { return myLogger::getInstance(); }
 
 private:
     //==============================================================================

@@ -36,7 +36,8 @@ int get_algo_version(char *version)
         LOG_MSG_CF(LOG_ERROR, "version is NULL");
         return E_VERSION_BUFFER_NULL;
     }
-    strcpy(version, VERSION);
+    // Use snprintf instead of strcpy to avoid buffer overflow
+    snprintf(version, 32, "%s", VERSION);
     return E_OK;
 }
 
@@ -76,6 +77,10 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     if (param == NULL) {
         LOG_MSG_CF(LOG_ERROR, "param is NULL");
         return E_PARAM_BUFFER_NULL;
+    }
+    if (param_size < 0) {
+        LOG_MSG_CF(LOG_ERROR, "param_size is negative: %d", param_size);
+        return E_PARAM_SIZE_INVALID;
     }
 
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
@@ -135,6 +140,10 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
         LOG_MSG_CF(LOG_ERROR, "param is NULL");
         return E_PARAM_BUFFER_NULL;
     }
+    if (param_size < 0) {
+        LOG_MSG_CF(LOG_ERROR, "param_size is negative: %d", param_size);
+        return E_PARAM_SIZE_INVALID;
+    }
 
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
     int ret = E_OK;
@@ -165,6 +174,10 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
         if (param_size > MAX_BUF_SIZE) {
             LOG_MSG_CF(LOG_ERROR, "param_size: %d is too large than MAX_BUF_SIZE %d", param_size, MAX_BUF_SIZE);
             return E_PARAM_SIZE_INVALID;
+        }
+        if (algo_handle_ptr->param4 == NULL) {
+            LOG_MSG_CF(LOG_ERROR, "param4 has not been initialized");
+            return E_PARAM_BUFFER_NULL;
         }
         memcpy(param, algo_handle_ptr->param4, param_size);
         break;

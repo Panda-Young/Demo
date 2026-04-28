@@ -299,7 +299,7 @@ void DemoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
             "Initialization Failed",
             "Failed to initialize the plugin! "
             "Please check the last part of the log file: \n" +
-                logger.getLogFile().getFullPathName() + "\n" +
+                getLogger().getLogFile().getFullPathName() + "\n" +
                 "You can also send the log file to the developers for further assistance.",
             "OK",
             nullptr,
@@ -532,8 +532,8 @@ void DemoAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
         apvts.state = tree;
         LOG_MSG(LOG_INFO, "restore parameters from memory block:\n" + apvts.state.toXmlString().toStdString());
         int lastLogLevelValue = static_cast<int>(apvts.getRawParameterValue("logLevel")->load() + 1);
-        if (logger.getLogLevel() != static_cast<LogLevel_t>(lastLogLevelValue)) {
-            logger.setLogLevel(static_cast<LogLevel_t>(lastLogLevelValue));
+        if (getLogger().getLogLevel() != static_cast<LogLevel_t>(lastLogLevelValue)) {
+            getLogger().setLogLevel(static_cast<LogLevel_t>(lastLogLevelValue));
             LOG_MSG(LOG_INFO, "Log level has been set to " +
                                   std::to_string(apvts.getRawParameterValue("logLevel")->load()) + " by last state");
         }

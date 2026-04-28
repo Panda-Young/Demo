@@ -201,7 +201,7 @@ void DemoAudioProcessorEditor::sliderValueChanged(juce::Slider *slider)
 void DemoAudioProcessorEditor::comboBoxChanged(juce::ComboBox *comboBox)
 {
     if (comboBox == &logLevelComboBox) {
-        audioProcessor.logger.setLogLevel(static_cast<LogLevel_t>(logLevelComboBox.getSelectedId()));
+        audioProcessor.getLogger().setLogLevel(static_cast<LogLevel_t>(logLevelComboBox.getSelectedId()));
         LOG_MSG(LOG_INFO, "Log level changed to " + logLevelComboBox.getText().toStdString());
     }
 }

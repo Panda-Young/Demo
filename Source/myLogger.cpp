@@ -7,7 +7,6 @@
  **************************************************************************/
 
 #include "myLogger.h"
-#include <chrono>
 #include <iomanip>
 #include <sstream>
 
@@ -21,10 +20,19 @@ myLogger::myLogger()
     : currentLogLevel(LOG_INFO)
 {
     initializeLogger();
+    if (fileLogger != nullptr) {
+        workerRunning.store(true, std::memory_order_relaxed);
+        workerThread = std::thread(&myLogger::workerLoop, this);
+    }
 }
 
 myLogger::~myLogger()
 {
+    workerRunning.store(false, std::memory_order_relaxed);
+    queueCv.notify_all();
+    if (workerThread.joinable()) {
+        workerThread.join();
+    }
 }
 
 void myLogger::initializeLogger()
@@ -35,63 +43,82 @@ void myLogger::initializeLogger()
         chosenDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
         chosenDir.createDirectory();
     }
+
     juce::String logFileName = juce::String(JucePlugin_Name) + "_VST_Plugin.log";
     logFile = chosenDir.getChildFile(logFileName);
     juce::String logStartMsg = juce::String(JucePlugin_Name) + " VST Plugin " + juce::String(JucePlugin_VersionString);
     fileLogger = std::make_unique<juce::FileLogger>(logFile, logStartMsg.toRawUTF8());
+
+#if JUCE_WINDOWS
+    processIdString = std::to_string(GetCurrentProcessId());
+#else
+    processIdString = std::to_string(getpid());
+#endif
 }
 
 void myLogger::logMsg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line)
 {
-    if (level < currentLogLevel || fileLogger == nullptr) {
+    if (level < currentLogLevel.load(std::memory_order_relaxed) || fileLogger == nullptr) {
         return;
     }
-    auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    LogEntry entry;
+    entry.timestamp = std::chrono::system_clock::now();
+    entry.threadId = std::this_thread::get_id();
+    entry.level = level;
+    entry.file = (file != nullptr) ? file : "unknown_file";
+    entry.function = (function != nullptr) ? function : "unknown_function";
+    entry.line = line;
+    entry.message = message;
+
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        if (logQueue.size() >= kMaxQueueSize) {
+            ++droppedLogCount;
+            return;
+        }
+        logQueue.emplace_back(std::move(entry));
+    }
+
+    queueCv.notify_one();
+}
+
+const char *myLogger::levelToString(LogLevel_t level) const
+{
+    switch (level) {
+    case LOG_DEBUG:
+        return "DEBUG";
+    case LOG_INFO:
+        return "INFO";
+    case LOG_WARN:
+        return "WARN";
+    case LOG_ERROR:
+        return "ERROR";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+std::string myLogger::formatLogMessage(const LogEntry &entry) const
+{
+    auto now_time_t = std::chrono::system_clock::to_time_t(entry.timestamp);
+    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(entry.timestamp.time_since_epoch()) % 1000;
     std::tm now_tm;
 #if JUCE_WINDOWS
     localtime_s(&now_tm, &now_time_t);
 #else
     localtime_r(&now_time_t, &now_tm);
 #endif
+
     std::ostringstream timestamp;
     timestamp << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S") << '.' << std::setfill('0') << std::setw(3) << now_ms.count();
 
-#if JUCE_WINDOWS
-    auto process_id = GetCurrentProcessId();
-#else
-    auto process_id = getpid();
-#endif
-    std::ostringstream process_id_str;
-    process_id_str << process_id;
-
-    auto thread_id = std::this_thread::get_id();
-    std::ostringstream thread_id_str;
-    thread_id_str << thread_id;
-
-    std::string level_str;
-    switch (level) {
-    case LOG_DEBUG:
-        level_str = "DEBUG";
-        break;
-    case LOG_INFO:
-        level_str = "INFO";
-        break;
-    case LOG_WARN:
-        level_str = "WARN";
-        break;
-    case LOG_ERROR:
-        level_str = "ERROR";
-        break;
-    default:
-        level_str = "UNKNOWN";
-        break;
-    }
+    std::ostringstream threadIdStr;
+    threadIdStr << entry.threadId;
 
     std::ostringstream logPrefix;
-    logPrefix << timestamp.str() << " [" << process_id_str.str() << "." << thread_id_str.str() << "] "
-              << level_str << " " << file << "@" << function << ":" << line;
+    logPrefix << timestamp.str() << " [" << processIdString << "." << threadIdStr.str() << "] "
+              << levelToString(entry.level) << " " << entry.file << ":" << entry.line << " @" << entry.function;
 
     std::string logPrefixStr = logPrefix.str();
     if (logPrefixStr.length() < 96) {
@@ -99,18 +126,50 @@ void myLogger::logMsg(LogLevel_t level, const std::string &message, const char *
     }
 
     std::ostringstream logMessage;
-    logMessage << logPrefixStr << " " << message;
+    logMessage << logPrefixStr << " " << entry.message;
+    return logMessage.str();
+}
 
-    {
-        std::lock_guard<std::mutex> lock(logMutex);
-        fileLogger->logMessage(logMessage.str());
+void myLogger::workerLoop()
+{
+    for (;;) {
+        std::deque<LogEntry> localQueue;
+        size_t droppedInBatch = 0;
+
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            queueCv.wait(lock, [this] {
+                return !workerRunning.load(std::memory_order_relaxed) || !logQueue.empty();
+            });
+
+            if (!workerRunning.load(std::memory_order_relaxed) && logQueue.empty()) {
+                break;
+            }
+
+            localQueue.swap(logQueue);
+            droppedInBatch = droppedLogCount;
+            droppedLogCount = 0;
+        }
+
+        if (fileLogger == nullptr) {
+            continue;
+        }
+
+        if (droppedInBatch > 0) {
+            std::ostringstream dropMsg;
+            dropMsg << "logger queue overflow, dropped " << droppedInBatch << " messages";
+            fileLogger->logMessage(dropMsg.str());
+        }
+
+        for (const auto &entry : localQueue) {
+            fileLogger->logMessage(formatLogMessage(entry));
+        }
     }
 }
 
 void myLogger::setLogLevel(LogLevel_t level)
 {
-    std::lock_guard<std::mutex> lock(logMutex);
-    currentLogLevel = level;
+    currentLogLevel.store(level, std::memory_order_relaxed);
 }
 
 void log_msg(LogLevel_t level, const std::string &message, const char *file, const char *function, int line)
@@ -122,6 +181,6 @@ extern "C" {
 
 void log_msg_c(LogLevel_t level, const char *message, const char *file, const char *function, int line)
 {
-    log_msg(level, message, file, function, line);
+    log_msg(level, message != nullptr ? message : "", file, function, line);
 }
 }
