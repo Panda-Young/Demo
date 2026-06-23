@@ -22,7 +22,7 @@
 
 #include "JucePluginDefines.h"
 
-#define JUCE_PROJUCER_VERSION 0x8000b
+#define JUCE_PROJUCER_VERSION 0x8000e
 
 //==============================================================================
 #define JUCE_MODULE_AVAILABLE_juce_analytics                      1
