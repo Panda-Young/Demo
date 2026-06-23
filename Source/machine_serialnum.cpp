@@ -4,6 +4,26 @@
 #include <intrin.h>  // Include this for cpuid
 #include <windows.h> // Include this for get processorid
 
+static bool get_cpu_id_by_cpuid(std::string &cpu_id)
+{
+    cpu_id.clear();
+
+    int cpuInfo[4] = {0};
+    __cpuid(cpuInfo, 1);
+
+    const unsigned int eax = static_cast<unsigned int>(cpuInfo[0]);
+    const unsigned int edx = static_cast<unsigned int>(cpuInfo[3]);
+
+    if (eax == 0 && edx == 0) {
+        return false;
+    }
+
+    char cpu[32] = {0};
+    snprintf(cpu, sizeof(cpu), "%08X%08X", eax, edx);
+    cpu_id.assign(cpu);
+    return true;
+}
+
 bool get_cpu_id(std::string &cpu_id)
 {
     const long MAX_COMMAND_SIZE = 10000;           // Command line output buffer size
@@ -89,12 +109,21 @@ bool get_cpu_id(std::string &cpu_id)
 
 END:
     // Close all handles
-    CloseHandle(hWritePipe);
-    CloseHandle(hReadPipe);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
+    if (hWritePipe != NULL)
+        CloseHandle(hWritePipe);
+    if (hReadPipe != NULL)
+        CloseHandle(hReadPipe);
+    if (pi.hProcess != NULL)
+        CloseHandle(pi.hProcess);
+    if (pi.hThread != NULL)
+        CloseHandle(pi.hThread);
 
-    return bret;
+    if (bret) {
+        return true;
+    }
+
+    cpu_id.clear();
+    return get_cpu_id_by_cpuid(cpu_id);
 }
 
 bool get_disk_id(std::string &disk_id)
